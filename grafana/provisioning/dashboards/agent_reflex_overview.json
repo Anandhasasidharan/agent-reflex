@@ -1,0 +1,172 @@
+{
+  "title": "AgentReflex Overview",
+  "version": 1,
+  "timezone": "browser",
+  "panels": [
+    {
+      "id": 1,
+      "title": "Failure Heatmap by MAST+ Category",
+      "type": "table",
+      "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8},
+      "options": {
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-http-datasource",
+            "uid": "grafana-http-datasource"
+          },
+          "url": "http://app:8000/stats/heatmap",
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Adaptive Recovery Rate",
+      "type": "stat",
+      "gridPos": {"x": 12, "y": 0, "w": 6, "h": 4},
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "percentage",
+            "steps": [
+              {"color": "red", "value": 0},
+              {"color": "yellow", "value": 40},
+              {"color": "green", "value": 70}
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-http-datasource",
+            "uid": "grafana-http-datasource"
+          },
+          "url": "http://app:8000/recovery/stats",
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Static Recovery Rate",
+      "type": "stat",
+      "gridPos": {"x": 18, "y": 0, "w": 6, "h": 4},
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "percentage",
+            "steps": [
+              {"color": "red", "value": 0},
+              {"color": "yellow", "value": 40},
+              {"color": "green", "value": 70}
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-http-datasource",
+            "uid": "grafana-http-datasource"
+          },
+          "url": "http://app:8000/recovery/stats",
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Agent Reliability Score Trend",
+      "type": "timeseries",
+      "gridPos": {"x": 12, "y": 4, "w": 12, "h": 4},
+      "options": {
+        "legend": {"show": true, "placement": "right"},
+        "tooltip": {"mode": "multi"}
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-http-datasource",
+            "uid": "grafana-http-datasource"
+          },
+          "url": "http://app:8000/agents/default_agent/reliability",
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Recovery Strategy Breakdown",
+      "type": "table",
+      "gridPos": {"x": 0, "y": 8, "w": 12, "h": 8},
+      "options": {
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-http-datasource",
+            "uid": "grafana-http-datasource"
+          },
+          "url": "http://app:8000/stats/recovery-breakdown",
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Consistency Score Gauge",
+      "type": "gauge",
+      "gridPos": {"x": 12, "y": 8, "w": 12, "h": 8},
+      "options": {
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
+      },
+      "fieldConfig": {
+        "defaults": {
+          "min": 0,
+          "max": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "red", "value": 0},
+              {"color": "yellow", "value": 0.4},
+              {"color": "green", "value": 0.7}
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-http-datasource",
+            "uid": "grafana-http-datasource"
+          },
+          "url": "http://app:8000/consistency/score",
+          "method": "POST"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 36
+}

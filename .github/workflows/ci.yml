@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install ruff mypy
+      - run: ruff check .
+      - run: mypy agent_reflex
+
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: agent_reflex_test
+          POSTGRES_USER: reflex
+          POSTGRES_PASSWORD: reflex_test
+        ports:
+          - 5432:5432
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: pip install -e ".[dev]"
+      - run: pytest --cov=agent_reflex --cov-report=xml
+      - uses: codecov/codecov-action@v4

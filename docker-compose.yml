@@ -1,0 +1,82 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: agent_reflex
+      POSTGRES_USER: reflex
+      POSTGRES_PASSWORD: reflex_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U reflex -d agent_reflex"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  neo4j:
+    image: neo4j:5-enterprise
+    environment:
+      NEO4J_AUTH: neo4j/reflex_dev
+      NEO4J_ACCEPT_LICENSE_AGREEMENT: "yes"
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    volumes:
+      - neodata:/data
+    healthcheck:
+      test: ["CMD-SHELL", "cypher-shell -u neo4j -p reflex_dev 'RETURN 1' || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OTEL_SEMCONV_STABILITY_OPT_IN: gen_ai_latest_experimental
+      AGENT_REFLEX_DB_URL: postgresql://reflex:reflex_dev@postgres:5432/agent_reflex
+      AGENT_REFLEX_NEO4J_URI: bolt://neo4j:7687
+      AGENT_REFLEX_NEO4J_USER: neo4j
+      AGENT_REFLEX_NEO4J_PASS: reflex_dev
+      AGENT_REFLEX_OTEL_ENDPOINT: ""
+      AGENT_REFLEX_REDACTION_ENABLED: "true"
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  grafana:
+    image: grafana/grafana:11-enterprise
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: reflex_dev
+      GF_INSTALL_PLUGINS: grafana-http-datasource
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - grafanadata:/var/lib/grafana
+    depends_on:
+      app:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  neodata:
+  grafanadata:

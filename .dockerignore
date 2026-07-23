@@ -1,0 +1,16 @@
+.venv
+.git
+.github
+.pytest_cache
+.ruff_cache
+__pycache__
+*.pyc
+*.pyo
+htmlcov
+.coverage
+.coverage.*
+*.egg-info
+mynotes.docx
+.env
+data/
+demo/causal_graph_viewer.html

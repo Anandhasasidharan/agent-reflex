@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.coverage
+agent_reflex.zip
+tests.zip
+demo.zip
+grafana.zip
+mynotes.docx
+venv/
+.venv/
+.env
