@@ -1,0 +1,323 @@
+{
+  "total_scenarios": 22,
+  "oracle_method": {
+    "mode_accuracy_pct": 90.9,
+    "step_accuracy_pct": 68.2,
+    "details": [
+      {
+        "scenario": "coord_misaligned_assumptions",
+        "mode_correct": false,
+        "step_correct": false,
+        "predicted_cause": "step_3",
+        "crs": 0.95
+      },
+      {
+        "scenario": "spec_ambiguous",
+        "mode_correct": true,
+        "step_correct": false,
+        "predicted_cause": "step_2",
+        "crs": 0.95
+      },
+      {
+        "scenario": "task_hallucination",
+        "mode_correct": true,
+        "step_correct": true,
+        "predicted_cause": "step_1",
+        "crs": 0.95
+      },
+      {
+        "scenario": "infra_rate_limit",
+        "mode_correct": true,
+        "step_correct": true,
+        "predicted_cause": "step_1",
+        "crs": 0.95
+      },
+      {
+        "scenario": "verif_overconfident",
+        "mode_correct": true,
+        "step_correct": true,
+        "predicted_cause": "step_1",
+        "crs": 0.9
+      },
+      {
+        "scenario": "infra_context_window",
+        "mode_correct": true,
+        "step_correct": true,
+        "predicted_cause": "step_3",
+        "crs": 0.85
+      },
+      {
+        "scenario": "spec_incomplete",
+        "mode_correct": true,
+        "step_correct": false,
+        "predicted_cause": "step_2",
+        "crs": 0.75
+      },
+      {
+        "scenario": "spec_contradictory",
+        "mode_correct": true,
+        "step_correct": true,
+        "predicted_cause": "step_1",
+        "crs": 0.75
+      },
+      {
+        "scenario": "spec_missing",
+        "mode_correct": false,
+        "step_correct": true,
+        "predicted_cause": "step_1",
+        "crs": 0.95
+      },
+      {
+        "scenario": "coord_misaligned_goals",
+        "mode_correct": true,
+        "step_correct": true,
+        "predicted_cause": "step_2",
+        "crs": 0.9
+      },
+      {
+        "scenario": "coord_resource_contention",
+        "mode_correct": true,
+        "step_correct": true,
+        "predicted_cause": "step_2",
+        "crs": 0.95
+      },
+      {
+        "scenario": "coord_deadlock",
+        "mode_correct": true,
+        "step_correct": true,
+        "predicted_cause": "step_1",
+        "crs": 0.8
+      },
+      {
+        "scenario": "verif_underconfident",
+        "mode_correct": true,
+        "step_correct": false,
+        "predicted_cause": "step_2",
+        "crs": 0.85
+      },
+      {
+        "scenario": "verif_wrong_criterion",
+        "mode_correct": true,
+        "step_correct": false,
+        "predicted_cause": "step_2",
+        "crs": 0.95
+      },
+      {
+        "scenario": "verif_self_inconsistent",
+        "mode_correct": true,
+        "step_correct": false,
+        "predicted_cause": "step_2",
+        "crs": 0.95
+      },
+      {
+        "scenario": "task_derailment",
+        "mode_correct": true,
+        "step_correct": true,
+        "predicted_cause": "step_1",
+        "crs": 0.9
+      },
+      {
+        "scenario": "infra_cascade_timeout",
+        "mode_correct": true,
+        "step_correct": true,
+        "predicted_cause": "step_1",
+        "crs": 0.95
+      },
+      {
+        "scenario": "infra_unknown",
+        "mode_correct": true,
+        "step_correct": true,
+        "predicted_cause": "step_1",
+        "crs": 0.85
+      },
+      {
+        "scenario": "transient_recovered_then_hallucination",
+        "mode_correct": true,
+        "step_correct": true,
+        "predicted_cause": "step_3",
+        "crs": 0.95
+      },
+      {
+        "scenario": "transient_recovered_then_wrong_criterion",
+        "mode_correct": true,
+        "step_correct": true,
+        "predicted_cause": "step_3",
+        "crs": 0.95
+      },
+      {
+        "scenario": "transient_recovered_then_derailment",
+        "mode_correct": true,
+        "step_correct": true,
+        "predicted_cause": "step_3",
+        "crs": 1.0
+      },
+      {
+        "scenario": "transient_recovered_then_deadlock",
+        "mode_correct": true,
+        "step_correct": false,
+        "predicted_cause": "step_4",
+        "crs": 0.85
+      }
+    ]
+  },
+  "naive_baseline": {
+    "mode_accuracy_pct": 90.9,
+    "step_accuracy_pct": 81.8,
+    "details": [
+      {
+        "scenario": "coord_misaligned_assumptions",
+        "mode_correct": false,
+        "step_correct": true,
+        "predicted_cause": "step_1",
+        "crs": 0.0
+      },
+      {
+        "scenario": "spec_ambiguous",
+        "mode_correct": true,
+        "step_correct": true,
+        "predicted_cause": "step_1",
+        "crs": 0.0
+      },
+      {
+        "scenario": "task_hallucination",
+        "mode_correct": true,
+        "step_correct": true,
+        "predicted_cause": "step_1",
+        "crs": 0.0
+      },
+      {
+        "scenario": "infra_rate_limit",
+        "mode_correct": true,
+        "step_correct": true,
+        "predicted_cause": "step_1",
+        "crs": 0.0
+      },
+      {
+        "scenario": "verif_overconfident",
+        "mode_correct": true,
+        "step_correct": true,
+        "predicted_cause": "step_1",
+        "crs": 0.0
+      },
+      {
+        "scenario": "infra_context_window",
+        "mode_correct": true,
+        "step_correct": true,
+        "predicted_cause": "step_3",
+        "crs": 0.0
+      },
+      {
+        "scenario": "spec_incomplete",
+        "mode_correct": true,
+        "step_correct": true,
+        "predicted_cause": "step_1",
+        "crs": 0.0
+      },
+      {
+        "scenario": "spec_contradictory",
+        "mode_correct": true,
+        "step_correct": true,
+        "predicted_cause": "step_1",
+        "crs": 0.0
+      },
+      {
+        "scenario": "spec_missing",
+        "mode_correct": false,
+        "step_correct": true,
+        "predicted_cause": "step_1",
+        "crs": 0.0
+      },
+      {
+        "scenario": "coord_misaligned_goals",
+        "mode_correct": true,
+        "step_correct": true,
+        "predicted_cause": "step_2",
+        "crs": 0.0
+      },
+      {
+        "scenario": "coord_resource_contention",
+        "mode_correct": true,
+        "step_correct": true,
+        "predicted_cause": "step_2",
+        "crs": 0.0
+      },
+      {
+        "scenario": "coord_deadlock",
+        "mode_correct": true,
+        "step_correct": true,
+        "predicted_cause": "step_1",
+        "crs": 0.0
+      },
+      {
+        "scenario": "verif_underconfident",
+        "mode_correct": true,
+        "step_correct": true,
+        "predicted_cause": "step_1",
+        "crs": 0.0
+      },
+      {
+        "scenario": "verif_wrong_criterion",
+        "mode_correct": true,
+        "step_correct": true,
+        "predicted_cause": "step_1",
+        "crs": 0.0
+      },
+      {
+        "scenario": "verif_self_inconsistent",
+        "mode_correct": true,
+        "step_correct": true,
+        "predicted_cause": "step_1",
+        "crs": 0.0
+      },
+      {
+        "scenario": "task_derailment",
+        "mode_correct": true,
+        "step_correct": true,
+        "predicted_cause": "step_1",
+        "crs": 0.0
+      },
+      {
+        "scenario": "infra_cascade_timeout",
+        "mode_correct": true,
+        "step_correct": true,
+        "predicted_cause": "step_1",
+        "crs": 0.0
+      },
+      {
+        "scenario": "infra_unknown",
+        "mode_correct": true,
+        "step_correct": true,
+        "predicted_cause": "step_1",
+        "crs": 0.0
+      },
+      {
+        "scenario": "transient_recovered_then_hallucination",
+        "mode_correct": true,
+        "step_correct": false,
+        "predicted_cause": "step_1",
+        "crs": 0.0
+      },
+      {
+        "scenario": "transient_recovered_then_wrong_criterion",
+        "mode_correct": true,
+        "step_correct": false,
+        "predicted_cause": "step_1",
+        "crs": 0.0
+      },
+      {
+        "scenario": "transient_recovered_then_derailment",
+        "mode_correct": true,
+        "step_correct": false,
+        "predicted_cause": "step_1",
+        "crs": 0.0
+      },
+      {
+        "scenario": "transient_recovered_then_deadlock",
+        "mode_correct": true,
+        "step_correct": false,
+        "predicted_cause": "step_1",
+        "crs": 0.0
+      }
+    ]
+  }
+}

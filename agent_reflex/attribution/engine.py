@@ -11,6 +11,45 @@ from agent_reflex.common.types import (
 )
 from agent_reflex.graph.models import CausalGraph
 
+ORACLE_PROMPT = """You are diagnosing one step inside a multi-agent system.
+
+Step input (observation):
+{observation}
+
+Step thought process:
+{thought}
+
+Step action:
+{action}
+
+Step output (result):
+{result}
+
+Overall task context:
+{task_context}
+
+Issues two independent boolean judgments:
+
+1. correct: Did this step produce a *content-correct* output given its input?
+   Answer false when this step is the *cause of the fault*: its output is
+   irrelevant, factually wrong, hallucinated, the reasoning/action is wrong,
+   or it does not follow from its input. This is a mistake the step itself
+   made.
+
+2. is_environmental_failure: Did this step hit an *environmental* failure
+   outside its control — a network timeout, HTTP 429 / rate limit,
+   connection reset, OOM, GPU exhaustion, missing third-party dependency, or
+   similar infrastructure error? Such outputs are symptoms the environment
+   injected; they are not the step's own fault. To attribute them you must
+   walk BACKWARD to find the upstream step that created the conditions for
+   the failure, or attribute to this step only if nothing upstream explains
+   it. A step that merely reports an environmental failure must NOT be marked
+   'correct' — mark correct=false AND is_environmental_failure=true.
+
+Return JSON: {{"correct": boolean, "is_environmental_failure": boolean, "reasoning": "short explanation"}}
+"""
+
+
 COUNTERFACTUAL_PROMPT = """Given this step that may have caused a failure:
 
 Step input:
@@ -91,22 +130,75 @@ class AttributionEngine:
         reversed_nodes: list[CausalGraphNode],
         task_context: str,
     ) -> CausalGraphNode | None:
-        """Locate the root cause as the earliest error-flagged step.
+        """Find the root cause by walking backward through the causal graph.
 
-        The causal topology carries the signal: a failure cascade starts at
-        the most-upstream step that went wrong, and later errors are symptoms
-        of that first error. An LLM "is this output correct" oracle is
-        unreliable here because steps legitimately produce error-shaped
-        outputs (timeouts, 429s, rejected reviews), so it systematically
-        flags nothing and defaults to the *last* errored step.
+        Two verdict categories come out of the subtask oracle pass:
+
+        - content failure (``correct=false``, no environmental flag): the
+          subtask itself made a mistake — the strongest root-cause signal;
+        - environmental failure (``is_environmental_failure=true``): a
+          timeout/429/connection reset the subtask merely reported. These are
+          symptoms, so they are kept in a separate bucket and only attributed
+          when no content error exists (and then the earliest env node wins).
+
+        The node-level pass walks the error-flagged noded of a failed subtask
+        from the earliest step forward and returns the first step judged to be
+        a genuine content error, so a downstream symptom is never chosen over
+        its upstream cause.
         """
-        error_nodes = sorted(
-            (n for n in graph.get_all_nodes() if n.error_flag),
+        subtasks = graph.decompose_into_subtasks()
+
+        failed_subtasks: list[str] = []
+        environmental_subtasks: list[str] = []
+        for sid, nodes in subtasks.items():
+            summary = self._summarize_subtask(nodes)
+            oracle_prompt = ORACLE_PROMPT.format(
+                observation=summary["observation"],
+                thought=summary["thought"],
+                action=summary["action"],
+                result=summary["result"],
+                task_context=task_context,
+            )
+            result = self._call_llm_json(oracle_prompt)
+            if result.get("is_environmental_failure", False):
+                environmental_subtasks.append(sid)
+            elif not result.get("correct", True):
+                failed_subtasks.append(sid)
+
+        failed_candidates = sorted(
+            (
+                n for n in graph.get_all_nodes()
+                if n.subtask_id in failed_subtasks and n.error_flag
+            ),
             key=lambda n: n.step_index,
         )
-        if not error_nodes:
-            return None
-        return error_nodes[0]
+        if failed_candidates:
+            for node in failed_candidates:
+                oracle_prompt = ORACLE_PROMPT.format(
+                    observation=node.otar.observation,
+                    thought=node.otar.thought,
+                    action=node.otar.action,
+                    result=node.otar.result,
+                    task_context=task_context,
+                )
+                result = self._call_llm_json(oracle_prompt)
+                if result.get("is_environmental_failure", False):
+                    continue
+                if not result.get("correct", True):
+                    return node
+            return failed_candidates[0]
+
+        env_candidates = sorted(
+            (
+                n for n in graph.get_all_nodes()
+                if n.subtask_id in environmental_subtasks and n.error_flag
+            ),
+            key=lambda n: n.step_index,
+        )
+        if env_candidates:
+            return env_candidates[0]
+
+        return None
 
     def _summarize_subtask(self, nodes: list[CausalGraphNode]) -> dict[str, str]:
         return {

@@ -128,7 +128,7 @@ agent_reflex/
 |-----------|--------|--------|-----------------|
 | **Causal graph reconstruction** | OTAR parsing, dependency inference, subtask decomposition | ✅ 11 tests | `pytest tests/test_causal_graph.py -v` |
 | **MAST+ Classification** | 18-mode taxonomy, LLM few-shot with 10 examples | ✅ 3 tests | `pytest tests/test_classification.py -v` |
-| **Step-level attribution** | Root cause = earliest errored step (causal topology) + counterfactual CRS (continuous confidence_pct) | ✅ 12 tests · 100% step on 18 scenarios (deterministic) | `pytest tests/test_attribution.py -v` |
+| **Step-level attribution** | Oracle-guided backtracking (LLM verifies each subtask, content vs environmental failure) + counterfactual CRS | ✅ 14 tests · vs `NaiveEarliestErrorBaseline` (`python -m agent_reflex.eval.runner --compare`) | `pytest tests/test_attribution.py -v` |
 | **Adaptive recovery lift** | Hand-rolled ε-greedy contextual bandit vs static baseline | ✅ 11 tests | `pytest tests/test_recovery.py -v` |
 | **Reliability scoring** | Weighted EWMA with trend & before/after playbook analysis | ✅ 11 tests | `pytest tests/test_reliability.py -v` |
 | **Consistency AUROC** | N=5 sampling, embedding agreement + lexical fallback, threshold calibration | ✅ 11 tests | `pytest tests/test_uncertainty.py -v` |
@@ -137,19 +137,32 @@ agent_reflex/
 | **Dashboard API** | FastAPI (9 endpoints): ingest, stats, recovery, reliability, predictive | ✅ 14 tests | `pytest tests/test_dashboard.py -v` |
 | **Instrumentation** | OTel GenAI decorators + LangGraph/CrewAI adapters | ✅ 10 tests | `pytest tests/test_instrumentation.py -v` |
 | **Types** | MastMode, MastPlusLabel, StepOTAR, CausalGraphNode, AttributionResult | ✅ 5 tests | `pytest tests/test_types.py -v` |
-| **Eval scaffolding** | 18 synthetic scenarios (all 18 modes) with ground-truth root causes | ✅ 11 tests | `pytest tests/test_eval.py -v` |
+| **Eval scaffolding** | 22 synthetic scenarios (all 18 modes + 4 transient-recovery decoys) with ground-truth root causes | ✅ 11 tests | `pytest tests/test_eval.py -v` |
 | **Causal graph viewer** | D3.js interactive graph with root-cause highlighting | ✅ 1 test | `pytest tests/test_causal_viewer.py -v` |
 | **Redaction ablation** | Accuracy delta with vs without redaction (mode −16.7%, n=6) | ✅ 14 tests | `pytest tests/test_ablation.py -v` |
 | **Cross-benchmark** | Who&When + TraceElephant benchmark adapters | ✅ 27 tests | `pytest tests/test_benchmark.py -v` |
 | **LLM client** | Model-agnostic wrapper: JSON retry, key resolution, embeddings | ✅ 15 tests | `pytest tests/test_llm_client.py -v` |
-| **Full test suite** | 171 tests across all modules | ✅ **171/171 passing** | `pytest --cov=agent_reflex` |
+| **Full test suite** | 173 tests across all modules | ✅ **173/173 passing** | `pytest --cov=agent_reflex` |
 
 ### Attribution Accuracy (Synthetic Eval Set, measured with DeepSeek)
 
-Run `DEEPSEEK_API_KEY=sk-... python -m agent_reflex.eval.runner --runs 3 --save` to reproduce. Latest run (DeepSeek `deepseek-v4-flash`, 18 scenarios × 3 runs):
+Run `DEEPSEEK_API_KEY=sk-... python -m agent_reflex.eval.runner --compare --save` to reproduce a side-by-side comparison of the oracle method vs a naive baseline.
 
-- **Mode-level accuracy: 85.2% ± 2.6** (per-run: 88.9%, 83.3%, 83.3%)
-- **Step-level accuracy: 100%** — the root cause is resolved structurally from the causal topology (the earliest error-flagged step), not by an LLM oracle, so it is deterministic and correct on all 18 ground-truth scenarios.
+**Step attribution methods.** Two competing explanations for "which step is the root cause" are compared on the same 22 synthetic scenarios (all 18 modes plus 4 scenarios where an early transient timeout self-recovers and the *real* cause appears later — designed to defeat any earliest-error shortcut):
+
+- **Oracle-guided backtracking** (production path): a virtual LLM oracle verifies each subtask, explicitly separating *content errors* (the prompt is being followed but the reasoning is wrong → root cause candidates) from *environmental failures* (timeout/rate-limit/connection-drop → symptoms, never "correct"). It walks error-flagged candidates earliest-first and returns the first node the oracle judges a content error.
+- **`NaiveEarliestErrorBaseline`** (`agent_reflex/eval/baseline.py`): always picks the first `error_flag` node. Deterministic, zero inference cost, but predicts the same candidate regardless of whether the early error truly caused the later failure.
+
+Earlier 18-scenario runs used the naive heuristic as the production path and reported "100% step" — that was a zero-inference fit, not a real causal signal, so those claims are withdrawn.
+
+**Measured comparison (DeepSeek, 22 scenarios):**
+
+| Method | Mode Acc | Step Acc |
+|--------|----------|----------|
+| Oracle-guided (real) | 90.9% (20/22) | 68.2% (15/22) |
+| NaiveEarliestErrorBaseline | 90.9% (20/22, same classifier) | 81.8% (18/22) |
+
+**Honest verdict: the oracle LOST the overall step-accuracy comparison (68.2% vs 81.8%).** The naive baseline wins outright on the 18 base scenarios (18/18, because those scenarios were designed so the earliest errored step *is* the cause), while the oracle over-prunes and undershoots there (12/18). The oracle only wins where the baseline is structurally incapable — the 4 transient-recovery decoys: oracle gets 3/4, naive 0/4. In other words, the naive baseline's score is a design artifact of the base set, not a real causal capability; the oracle is directionally correct on the hard class but still misses. Per the eval constraint, the oracle prompt was not re-tuned against this set, so the gap is reported as-is. Full per-scenario detail in `eval_results/comparison_run_20260802_190150.json`.
 
 | Scenario | True Mode | Predicted | Step | CRS |
 |----------|-----------|-----------|------|-----|
@@ -172,7 +185,7 @@ Run `DEEPSEEK_API_KEY=sk-... python -m agent_reflex.eval.runner --runs 3 --save`
 | infra_cascade_timeout | infra_cascade_timeout | infra_cascade_timeout ✓ | ✓ | 0.90 |
 | infra_unknown | infra_unknown | infra_unknown ✓ | ✓ | 0.95 |
 
-Mode classification (18/18 modes) is strong; the remaining mode misses are genuinely ambiguous confusions (e.g. `task_hallucination` vs `verif_overconfident`, `spec_missing` vs `spec_incomplete`). Step-level attribution is deterministic via the causal topology (earliest error-flagged step is the root of the cascade), so all 18 scenarios resolve to their ground-truth root cause. The counterfactual CRS stays calibrated (0.80–0.95) across scenarios.
+Mode classification is strong; the remaining mode misses are genuinely ambiguous confusions (e.g. `task_hallucination` vs `verif_overconfident`, `spec_missing` vs `spec_incomplete`). Step-level attribution compares the oracle-guided method against the naive baseline; head-to-head results are stored in `eval_results/comparison_run_*.json` and reported plainly in the `--compare` output.
 
 ### Redaction Ablation (measured with DeepSeek)
 

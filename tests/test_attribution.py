@@ -88,13 +88,85 @@ def _two_error_node_graph():
     return graph
 
 
-def test_oracle_picks_earliest_error_node(monkeypatch):
-    """The root of a failure cascade is the earliest error-flagged node,
-    not the last symptom (deterministic from causal topology)."""
+def test_oracle_picks_earliest_content_error(monkeypatch):
+    """Within a failed subtask, the earliest *content* error is the root
+    cause, not the last symptom."""
     engine = AttributionEngine()
-    graph = _two_error_node_graph()
+    graph = CausalGraph()
+    graph.add_step(CausalGraphNode(
+        node_id="s1", agent_id="a", step_index=1,
+        otar=StepOTAR("input", "think1", "query", "bogus column"),
+        parent_id=None, subtask_id="t1", execution_time_ms=10.0, error_flag=True,
+    ))
+    graph.add_step(CausalGraphNode(
+        node_id="s2", agent_id="a", step_index=2,
+        otar=StepOTAR("input", "think2", "query", "recovered fine"),
+        parent_id="s1", subtask_id="t1", execution_time_ms=10.0, error_flag=True,
+    ))
     reversed_nodes = sorted(graph.get_all_nodes(), key=lambda n: n.step_index, reverse=True)
 
+    def fake_oracle(prompt: str) -> dict:
+        if "think1" in prompt and "think2" not in prompt:
+            return {"correct": False, "is_environmental_failure": False}
+        if "think2" in prompt and "think1" not in prompt:
+            return {"correct": True, "is_environmental_failure": False}
+        return {"correct": False, "is_environmental_failure": False}
+
+    monkeypatch.setattr(engine, "_call_llm_json", fake_oracle)
+    node = engine._oracle_guided_backtracking(graph, reversed_nodes, "solve it")
+    assert node.step_index == 1
+
+
+def test_oracle_content_beats_environmental(monkeypatch):
+    """An upstream content error explains an environmental failure later in
+    the chain; the content error must be picked, not the timeout."""
+    engine = AttributionEngine()
+    graph = CausalGraph()
+    graph.add_step(CausalGraphNode(
+        node_id="s1", agent_id="a", step_index=1,
+        otar=StepOTAR("input", "think1", "query", "wrong column name"),
+        parent_id=None, subtask_id="t1", execution_time_ms=10.0, error_flag=True,
+    ))
+    graph.add_step(CausalGraphNode(
+        node_id="s2", agent_id="a", step_index=2,
+        otar=StepOTAR("input", "think2", "query", "ERROR: timeout"),
+        parent_id="s1", subtask_id="t2", execution_time_ms=10.0, error_flag=True,
+    ))
+    reversed_nodes = sorted(graph.get_all_nodes(), key=lambda n: n.step_index, reverse=True)
+
+    def fake_oracle(prompt: str) -> dict:
+        if "wrong column" in prompt:
+            return {"correct": False, "is_environmental_failure": False}
+        if "timeout" in prompt:
+            return {"correct": False, "is_environmental_failure": True}
+        return {"correct": True, "is_environmental_failure": False}
+
+    monkeypatch.setattr(engine, "_call_llm_json", fake_oracle)
+    node = engine._oracle_guided_backtracking(graph, reversed_nodes, "solve it")
+    assert node.node_id == "s1"
+
+
+def test_oracle_pure_environmental_picks_earliest(monkeypatch):
+    """A whole subtask that is only environmental failures (e.g. rate-limit
+    cascade) still resolves to the *earliest* timeout, never the last."""
+    engine = AttributionEngine()
+    graph = CausalGraph()
+    graph.add_step(CausalGraphNode(
+        node_id="s1", agent_id="a", step_index=1,
+        otar=StepOTAR("input", "think1", "fetch", "429 Too Many Requests"),
+        parent_id=None, subtask_id="t1", execution_time_ms=10.0, error_flag=True,
+    ))
+    graph.add_step(CausalGraphNode(
+        node_id="s2", agent_id="a", step_index=2,
+        otar=StepOTAR("input", "think2", "fetch", "429 Too Many Requests"),
+        parent_id="s1", subtask_id="t2", execution_time_ms=10.0, error_flag=True,
+    ))
+    reversed_nodes = sorted(graph.get_all_nodes(), key=lambda n: n.step_index, reverse=True)
+
+    def fake_oracle(prompt: str) -> dict:
+        return {"correct": False, "is_environmental_failure": True}
+
+    monkeypatch.setattr(engine, "_call_llm_json", fake_oracle)
     node = engine._oracle_guided_backtracking(graph, reversed_nodes, "solve it")
     assert node.step_index == 1
 
@@ -108,6 +180,11 @@ def test_oracle_returns_none_when_no_errors(monkeypatch):
         parent_id=None, subtask_id="t1", execution_time_ms=10.0, error_flag=False,
     ))
     reversed_nodes = sorted(graph.get_all_nodes(), key=lambda n: n.step_index, reverse=True)
+
+    def fake_oracle(prompt: str) -> dict:
+        return {"correct": True, "is_environmental_failure": False}
+
+    monkeypatch.setattr(engine, "_call_llm_json", fake_oracle)
     node = engine._oracle_guided_backtracking(graph, reversed_nodes, "solve it")
     assert node is None
 
