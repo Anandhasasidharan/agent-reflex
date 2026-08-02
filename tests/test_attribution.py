@@ -89,20 +89,27 @@ def _two_error_node_graph():
 
 
 def test_oracle_picks_earliest_error_node(monkeypatch):
-    """When a failed subtask has several error nodes, the root of the
-    cascade (earliest failing node) must be returned, not the last symptom."""
+    """The root of a failure cascade is the earliest error-flagged node,
+    not the last symptom (deterministic from causal topology)."""
     engine = AttributionEngine()
     graph = _two_error_node_graph()
     reversed_nodes = sorted(graph.get_all_nodes(), key=lambda n: n.step_index, reverse=True)
 
-    def fake_oracle(prompt: str) -> dict:
-        if "think2" in prompt and "think1" not in prompt:
-            return {"correct": True}
-        return {"correct": False}
-
-    monkeypatch.setattr(engine, "_call_llm_json", fake_oracle)
     node = engine._oracle_guided_backtracking(graph, reversed_nodes, "solve it")
     assert node.step_index == 1
+
+
+def test_oracle_returns_none_when_no_errors(monkeypatch):
+    engine = AttributionEngine()
+    graph = CausalGraph()
+    graph.add_step(CausalGraphNode(
+        node_id="s1", agent_id="a", step_index=1,
+        otar=StepOTAR("input", "think", "call", "all good"),
+        parent_id=None, subtask_id="t1", execution_time_ms=10.0, error_flag=False,
+    ))
+    reversed_nodes = sorted(graph.get_all_nodes(), key=lambda n: n.step_index, reverse=True)
+    node = engine._oracle_guided_backtracking(graph, reversed_nodes, "solve it")
+    assert node is None
 
 
 def test_counterfactual_continuous_score(monkeypatch):

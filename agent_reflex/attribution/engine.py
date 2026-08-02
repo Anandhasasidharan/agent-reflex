@@ -11,31 +11,6 @@ from agent_reflex.common.types import (
 )
 from agent_reflex.graph.models import CausalGraph
 
-ORACLE_PROMPT = """You are verifying whether a step in a multi-agent system produced the correct output given its input and the overall task.
-
-Step input (observation):
-{observation}
-
-Step thought process:
-{thought}
-
-Step action:
-{action}
-
-Step output (result):
-{result}
-
-Overall task context:
-{task_context}
-
-Question: Did this step produce a *correct* output given its input?
-Be strict: if the output is irrelevant, factually wrong, or doesn't follow from the input, answer NO.
-If the output is reasonable and correct, answer YES.
-
-Return JSON: {{"correct": boolean, "reasoning": "short explanation"}}
-"""
-
-
 COUNTERFACTUAL_PROMPT = """Given this step that may have caused a failure:
 
 Step input:
@@ -116,48 +91,22 @@ class AttributionEngine:
         reversed_nodes: list[CausalGraphNode],
         task_context: str,
     ) -> CausalGraphNode | None:
-        subtasks = graph.decompose_into_subtasks()
+        """Locate the root cause as the earliest error-flagged step.
 
-        failed_subtasks: list[str] = []
-        for sid, nodes in subtasks.items():
-            summary = self._summarize_subtask(nodes)
-            oracle_prompt = ORACLE_PROMPT.format(
-                observation=summary["observation"],
-                thought=summary["thought"],
-                action=summary["action"],
-                result=summary["result"],
-                task_context=task_context,
-            )
-            result = self._call_llm_json(oracle_prompt)
-            if not result.get("correct", True):
-                failed_subtasks.append(sid)
-
-        if not failed_subtasks:
+        The causal topology carries the signal: a failure cascade starts at
+        the most-upstream step that went wrong, and later errors are symptoms
+        of that first error. An LLM "is this output correct" oracle is
+        unreliable here because steps legitimately produce error-shaped
+        outputs (timeouts, 429s, rejected reviews), so it systematically
+        flags nothing and defaults to the *last* errored step.
+        """
+        error_nodes = sorted(
+            (n for n in graph.get_all_nodes() if n.error_flag),
+            key=lambda n: n.step_index,
+        )
+        if not error_nodes:
             return None
-
-        candidates = [
-            n for n in reversed_nodes
-            if n.subtask_id in failed_subtasks and n.error_flag
-        ]
-        if not candidates:
-            return reversed_nodes[0]
-
-        # Node-level oracle pass: within failed subtasks, verify each error
-        # node individually, earliest first, and return the first that fails.
-        # This picks the root of a cascade instead of its last symptom.
-        for node in sorted(candidates, key=lambda n: n.step_index):
-            oracle_prompt = ORACLE_PROMPT.format(
-                observation=node.otar.observation,
-                thought=node.otar.thought,
-                action=node.otar.action,
-                result=node.otar.result,
-                task_context=task_context,
-            )
-            result = self._call_llm_json(oracle_prompt)
-            if not result.get("correct", True):
-                return node
-
-        return candidates[0]
+        return error_nodes[0]
 
     def _summarize_subtask(self, nodes: list[CausalGraphNode]) -> dict[str, str]:
         return {
