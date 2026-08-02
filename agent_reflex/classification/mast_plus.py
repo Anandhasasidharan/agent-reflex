@@ -22,11 +22,35 @@ MAST_EXAMPLES: list[dict] = [
         "label": "coord_misaligned_assumptions",
     },
     {
-        "trace": "Agent G finished its analysis but marked it with 99% confidence. The result was factually wrong because it never actually checked the source data — it just summarized its own prior output.",
+        "trace": "Agent G was told to maximize throughput; Agent H was told to maximize correctness on the same shared dataset. Agent G kept writing partial rows while Agent H kept rolling back the transaction it deemed incomplete. Neither goal was wrong alone; the two goals conflicted.",
+        "label": "coord_misaligned_goals",
+    },
+    {
+        "trace": "Two agents both wanted a validated answer to proceed. Agent I would not release its intermediate output until Agent J acknowledged it, and Agent J would not acknowledge anything until Agent I released it. Both ended it up blocked forever.",
+        "label": "coord_deadlock",
+    },
+    {
+        "trace": "Four agents all fired the same expensive external model call simultaneously to answer overlapping subquestions, and the shared GPU node returned an OOM error. No agent owned the shared resource or serialized access to it.",
+        "label": "coord_resource_contention",
+    },
+    {
+        "trace": "Agent G finished its analysis but marked it with 99% confidence. The result was factually wrong because it never validated the source data against the actual ledger — it simply re-signed its own prior inference. Output reads confidently but is wrong.",
         "label": "verif_overconfident",
     },
     {
-        "trace": "Agent H completed every step correctly per its instructions, but the instructions themselves asked for 'user count by country' while the actual requirement was 'unique monthly active users by region'.",
+        "trace": "Agent J computed the correct answer twice, but its two independent draft samples differed in wording, so it flagged the result as 'likely wrong' and escalated it for human review. Its own numeric answer matched ground truth exactly. The check was far too strict.",
+        "label": "verif_underconfident",
+    },
+    {
+        "trace": "Agent K was asked 'is the total correct?', so it verified the total against itself, re-adding the two line items and confirming the arithmetic. But the numbers themselves were stale from a week-old cache, and the actual amounts had changed. It checked procedure; the question was really about the data.",
+        "label": "verif_wrong_criterion",
+    },
+    {
+        "trace": "Agent L answered 'the cost is 120' to a question in one step, then said 'the cost is 80' in a later step for the same item. No retraction or correction notes were found — the two answers disagree without explanation.",
+        "label": "verif_self_inconsistent",
+    },
+    {
+        "trace": "Agent H completed every step correctly per its instructions, but the instruction itself asked for 'user count by country' while the actual business requirement was 'unique monthly active users by region'. The work was valid; the task asked for it was the wrong task.",
         "label": "task_derailment",
     },
     {
@@ -42,8 +66,12 @@ MAST_EXAMPLES: list[dict] = [
         "label": "infra_context_window",
     },
     {
-        "trace": "A five-agent team was deployed. Agent A timed out waiting for Agent B's output. Agent B was waiting for Agent C. Agent C had crashed silently. All three cascading timeouts triggered within 30 seconds.",
+        "trace": "A five-agent team was deployed. Agent A timed out waiting for Agent B's output. Agent B was waiting Agent C. Agent C had crashed silently. All three timed out in cascade within 30 seconds.",
         "label": "infra_cascade_timeout",
+    },
+    {
+        "trace": "The agent was cut off mid-call by a transparent `transport connection reset` / DNS failure that was not a semantic or agentic error at all, and there was no fallback path to reopen the connection.",
+        "label": "infra_unknown",
     },
 ]
 
@@ -117,15 +145,18 @@ class MastPlusClassifier:
 
     def classify_from_graph(self, graph_dict: dict) -> MastPlusLabel:
         steps = graph_dict.get("nodes", [])
-        edges = graph_dict.get("edges", [])
+        steps = sorted(steps, key=lambda s: s["step_index"])
         trace_parts = []
+        edges = graph_dict.get("edges", [])
         for step in steps:
+            flag = "ERROR" if step["error_flag"] else "OK"
+            otar = step["otar"]
             trace_parts.append(
-                f"[{step['agent_id']}] step {step['step_index']}: "
-                f"action={step['otar']['action']}, "
-                f"thought={step['otar']['thought'][:200]}, "
-                f"result={step['otar']['result'][:200]}, "
-                f"error={step['error_flag']}"
+                f"[{step['agent_id']}|{flag}] step {step['step_index']} "
+                f"(subtask={step.get('subtask_id', '?')}): "
+                f"action={otar['action']}; "
+                f"thought={otar['thought'][:200]}; "
+                f"result={otar['result'][:200]}"
             )
         for edge in edges:
             trace_parts.append(f"  {edge['source_id']} -[{edge['edge_type']}]-> {edge['target_id']}")

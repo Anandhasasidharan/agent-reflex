@@ -65,6 +65,8 @@ class LLMClient:
             self._client = openai.OpenAI(
                 api_key=resolve_api_key(self._settings),
                 base_url=self._settings.llm_base_url,
+                timeout=120.0,
+                max_retries=2,
             )
         return self._client
 
@@ -81,22 +83,27 @@ class LLMClient:
         messages: list[dict[str, str]],
         temperature: float = 0.1,
     ) -> dict[str, Any]:
-        try:
-            response = self.client.chat.completions.create(
-                model=self._settings.llm_model,
-                messages=messages,
-                response_format={"type": "json_object"},
-                temperature=temperature,
-            )
-            content = response.choices[0].message.content or ""
-        except Exception:
-            response = self.client.chat.completions.create(
-                model=self._settings.llm_model,
-                messages=messages,
-                temperature=temperature,
-            )
-            content = response.choices[0].message.content or ""
-        return extract_json(content)
+        """Chat completion parsed as JSON, retrying through malformed responses.
+
+        Providers occasionally truncate or emit non-JSON prose. Each retry
+        alternates json_object mode / plain mode so strict-mode failures recover.
+        """
+        last_error: Exception | None = None
+        for attempt in range(3):
+            try:
+                kwargs: dict[str, Any] = {"temperature": temperature}
+                if attempt % 2 == 0:
+                    kwargs["response_format"] = {"type": "json_object"}
+                response = self.client.chat.completions.create(
+                    model=self._settings.llm_model,
+                    messages=messages,
+                    **kwargs,
+                )
+                content = response.choices[0].message.content or ""
+                return extract_json(content)
+            except Exception as exc:
+                last_error = exc
+        raise ValueError(f"chat_json failed after 3 attempts: {last_error}")
 
     def embed(self, text: str) -> list[float]:
         if not self._settings.llm_embedding_base_url:

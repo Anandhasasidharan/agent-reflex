@@ -1,12 +1,26 @@
 import io
 import sys
 
+from agent_reflex.common.types import MastMode
 from agent_reflex.eval.ablation import run_ablation
-from agent_reflex.eval.runner import SYNTHETIC_SCENARIOS, build_graph_from_scenario, main, run_eval
+from agent_reflex.eval.runner import (
+    SYNTHETIC_SCENARIOS,
+    build_graph_from_scenario,
+    main,
+    run_eval,
+    run_eval_iterated,
+    save_results_json,
+)
 
 
 def test_synthetic_scenarios_defined():
-    assert len(SYNTHETIC_SCENARIOS) >= 6
+    assert len(SYNTHETIC_SCENARIOS) >= 18
+
+
+def test_synthetic_scenarios_cover_all_modes():
+    covered = {s["true_mode"] for s in SYNTHETIC_SCENARIOS}
+    all_modes = {m.value for m in MastMode}
+    assert all_modes == covered
 
 
 def test_build_graph_from_scenario():
@@ -79,3 +93,21 @@ def test_ablation_main_no_api_key(monkeypatch):
     result = run_ablation()
     assert "error" in result
     assert result["error"] == "no_api_key"
+
+
+def test_run_eval_iterated_no_api_key(monkeypatch):
+    monkeypatch.delenv("AGENT_REFLEX_OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
+    monkeypatch.delenv("AGENT_REFLEX_LLM_API_KEY", raising=False)
+    result = run_eval_iterated(n_runs=3)
+    assert "error" in result
+    assert result["error"] == "no_api_key"
+
+
+def test_save_results_json(tmp_path):
+    path = save_results_json({"mode_accuracy": 50.0, "details": []}, str(tmp_path / "x.json"))
+    import json
+    with open(path) as f:
+        data = json.load(f)
+    assert data["mode_accuracy"] == 50.0

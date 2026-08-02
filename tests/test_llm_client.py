@@ -81,6 +81,8 @@ def test_client_wiring(monkeypatch):
     fake_openai.OpenAI.assert_called_once_with(
         api_key="sk-test",
         base_url="https://api.deepseek.com",
+        timeout=120.0,
+        max_retries=2,
     )
     assert c is not None
 
@@ -122,6 +124,19 @@ def test_chat_json_retries_without_json_mode(monkeypatch):
     second_kwargs = create.call_args_list[1].kwargs
     assert "response_format" in first_kwargs
     assert "response_format" not in second_kwargs
+
+
+def test_chat_json_retries_on_malformed_json(monkeypatch):
+    fake_openai = _mock_openai_module(monkeypatch)
+    create = fake_openai.OpenAI.return_value.chat.completions.create
+    create.side_effect = [
+        _fake_response('{"mode": "spec_contradictory", "confide'),  # truncated
+        _fake_response('{"mode": "spec_contradictory"}'),
+    ]
+    client = LLMClient(Settings(_env_file=None, llm_api_key="sk-test"))
+    result = client.chat_json(messages=[{"role": "user", "content": "hi"}])
+    assert result == {"mode": "spec_contradictory"}
+    assert create.call_count == 2
 
 
 def test_embed_raises_without_provider():

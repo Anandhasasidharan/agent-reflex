@@ -139,7 +139,25 @@ class AttributionEngine:
             n for n in reversed_nodes
             if n.subtask_id in failed_subtasks and n.error_flag
         ]
-        return candidates[0] if candidates else reversed_nodes[0]
+        if not candidates:
+            return reversed_nodes[0]
+
+        # Node-level oracle pass: within failed subtasks, verify each error
+        # node individually, earliest first, and return the first that fails.
+        # This picks the root of a cascade instead of its last symptom.
+        for node in sorted(candidates, key=lambda n: n.step_index):
+            oracle_prompt = ORACLE_PROMPT.format(
+                observation=node.otar.observation,
+                thought=node.otar.thought,
+                action=node.otar.action,
+                result=node.otar.result,
+                task_context=task_context,
+            )
+            result = self._call_llm_json(oracle_prompt)
+            if not result.get("correct", True):
+                return node
+
+        return candidates[0]
 
     def _summarize_subtask(self, nodes: list[CausalGraphNode]) -> dict[str, str]:
         return {

@@ -1,0 +1,123 @@
+============================================================
+AgentReflex Eval — Attribution Accuracy Report
+============================================================
+
+Test set: 18 synthetic scenarios
+
+
+  --- Run 1/3 ---
+  Running: coord_misaligned_assumptions... ✓ mode, ✗ step
+  Running: spec_ambiguous... ✓ mode, ✗ step
+  Running: task_hallucination... ✓ mode, ✓ step
+  Running: infra_rate_limit... ✓ mode, ✗ step
+  Running: verif_overconfident... ✗ mode, ✓ step
+  Running: infra_context_window... ✓ mode, ✓ step
+  Running: spec_incomplete... ✓ mode, ✗ step
+  Running: spec_contradictory... ✓ mode, ✓ step
+  Running: spec_missing... ✗ mode, ✗ step
+  Running: coord_misaligned_goals... ✓ mode, ✓ step
+  Running: coord_resource_contention... ✓ mode, ✓ step
+  Running: coord_deadlock... ✓ mode, ✗ step
+  Running: verif_underconfident... ✓ mode, ✗ step
+  Running: verif_wrong_criterion... ✓ mode, ✗ step
+  Running: verif_self_inconsistent... ✓ mode, ✗ step
+  Running: task_derailment... ✓ mode, ✓ step
+  Running: infra_cascade_timeout... ✓ mode, ✗ step
+  Running: infra_unknown... ✓ mode, ✗ step
+
+  --- Run 2/3 ---
+  Running: coord_misaligned_assumptions... ✗ mode, ✗ step
+  Running: spec_ambiguous... ✓ mode, ✗ step
+  Running: task_hallucination... ✓ mode, ✓ step
+  Running: infra_rate_limit... ✓ mode, ✗ step
+  Running: verif_overconfident... ✗ mode, ✓ step
+  Running: infra_context_window... ✓ mode, ✓ step
+  Running: spec_incomplete... ✓ mode, ✗ step
+  Running: spec_contradictory... ✓ mode, ✓ step
+  Running: spec_missing... ✗ mode, ✓ step
+  Running: coord_misaligned_goals... ✓ mode, ✓ step
+  Running: coord_resource_contention... ✓ mode, ✓ step
+  Running: coord_deadlock... ✓ mode, ✗ step
+  Running: verif_underconfident... ✓ mode, ✗ step
+  Running: verif_wrong_criterion... ✓ mode, ✗ step
+  Running: verif_self_inconsistent... ✓ mode, ✗ step
+  Running: task_derailment... ✓ mode, ✓ step
+  Running: infra_cascade_timeout... ✓ mode, ✗ step
+  Running: infra_unknown... ✓ mode, ✗ step
+
+  --- Run 3/3 ---
+  Running: coord_misaligned_assumptions... ✗ mode, ✗ step
+  Running: spec_ambiguous... ✓ mode, ✗ step
+  Running: task_hallucination... ✓ mode, ✓ step
+  Running: infra_rate_limit... ✓ mode, ✗ step
+  Running: verif_overconfident... ✗ mode, ✓ step
+  Running: infra_context_window... ✓ mode, ✓ step
+  Running: spec_incomplete... ✓ mode, ✗ step
+  Running: spec_contradictory... ✓ mode, ✓ step
+  Running: spec_missing... ✗ mode, ✗ step
+  Running: coord_misaligned_goals... ✓ mode, ✓ step
+  Running: coord_resource_contention... ✓ mode, ✓ step
+  Running: coord_deadlock... ✓ mode, ✗ step
+  Running: verif_underconfident... ✓ mode, ✗ step
+  Running: verif_wrong_criterion... ✓ mode, ✗ step
+  Running: verif_self_inconsistent... ✓ mode, ✗ step
+  Running: task_derailment... ✓ mode, ✗ step
+  Running: infra_cascade_timeout... ✓ mode, ✗ step
+  Running: infra_unknown... ✓ mode, ✗ step
+
+Results (across runs):
+  Mode-level accuracy:  85.2% ± 2.6
+  Step-level accuracy:  38.9% ± 4.5
+  Per-run:
+    Run 1: mode 88.9%  step 38.9%
+    Run 2: mode 83.3%  step 44.4%
+    Run 3: mode 83.3%  step 33.3%
+
+Per-scenario breakdown (last run):
+Scenario                         True Mode                    Predicted                    CRS    Mode   Step  
+----------------------------------------------------------------------------------------------------------------
+coord_misaligned_assumptions     coord_misaligned_assumptions task_hallucination           0.90   ✗      ✗     
+spec_ambiguous                   spec_ambiguous               spec_ambiguous               0.95   ✓      ✗     
+task_hallucination               task_hallucination           task_hallucination           0.80   ✓      ✓     
+infra_rate_limit                 infra_rate_limit             infra_rate_limit             0.90   ✓      ✗     
+verif_overconfident              verif_overconfident          task_hallucination           0.95   ✗      ✓     
+infra_context_window             infra_context_window         infra_context_window         0.90   ✓      ✓     
+spec_incomplete                  spec_incomplete              spec_incomplete              0.80   ✓      ✗     
+spec_contradictory               spec_contradictory           spec_contradictory           0.90   ✓      ✓     
+spec_missing                     spec_missing                 spec_incomplete              0.95   ✗      ✗     
+coord_misaligned_goals           coord_misaligned_goals       coord_misaligned_goals       0.90   ✓      ✓     
+coord_resource_contention        coord_resource_contention    coord_resource_contention    0.90   ✓      ✓     
+coord_deadlock                   coord_deadlock               coord_deadlock               0.95   ✓      ✗     
+verif_underconfident             verif_underconfident         verif_underconfident         0.90   ✓      ✗     
+verif_wrong_criterion            verif_wrong_criterion        verif_wrong_criterion        0.85   ✓      ✗     
+verif_self_inconsistent          verif_self_inconsistent      verif_self_inconsistent      0.95   ✓      ✗     
+task_derailment                  task_derailment              task_derailment              0.95   ✓      ✗     
+infra_cascade_timeout            infra_cascade_timeout        infra_cascade_timeout        0.90   ✓      ✗     
+infra_unknown                    infra_unknown                infra_unknown                0.95   ✓      ✗     
+
+                              coord_deadlock      coord_misaligned_asscoord_misaligned_goacoord_resource_conteinfra_cascade_timeouinfra_context_windowinfra_rate_limit    infra_unknown       spec_ambiguous      spec_contradictory  spec_incomplete     spec_missing        task_derailment     task_hallucination  verif_overconfident verif_self_inconsistverif_underconfidentverif_wrong_criterio
+coord_deadlock                1                   0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   
+coord_misaligned_assumptions  0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   1                   0                   0                   0                   0                   
+coord_misaligned_goals        0                   0                   1                   0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   
+coord_resource_contention     0                   0                   0                   1                   0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   
+infra_cascade_timeout         0                   0                   0                   0                   1                   0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   
+infra_context_window          0                   0                   0                   0                   0                   1                   0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   
+infra_rate_limit              0                   0                   0                   0                   0                   0                   1                   0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   
+infra_unknown                 0                   0                   0                   0                   0                   0                   0                   1                   0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   
+spec_ambiguous                0                   0                   0                   0                   0                   0                   0                   0                   1                   0                   0                   0                   0                   0                   0                   0                   0                   0                   
+spec_contradictory            0                   0                   0                   0                   0                   0                   0                   0                   0                   1                   0                   0                   0                   0                   0                   0                   0                   0                   
+spec_incomplete               0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   1                   0                   0                   0                   0                   0                   0                   0                   
+spec_missing                  0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   1                   0                   0                   0                   0                   0                   0                   0                   
+task_derailment               0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   1                   0                   0                   0                   0                   0                   
+task_hallucination            0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   1                   0                   0                   0                   0                   
+verif_overconfident           0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   1                   0                   0                   0                   0                   
+verif_self_inconsistent       0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   1                   0                   0                   
+verif_underconfident          0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   1                   0                   
+verif_wrong_criterion         0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   0                   1                   
+
+Structured results saved to: /mnt/d/portfilio project/cyber/ai defence/agent_reflex/eval_results/synthetic_run_20260802_180857.json
+
+============================================================
+Note: These are synthetic scenarios designed to test specific
+failure modes. Real-world Who&When benchmark results will differ.
+============================================================

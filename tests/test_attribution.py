@@ -73,6 +73,38 @@ def _run_counterfactual(engine, llm_response: dict, monkeypatch) -> float:
     return engine._counterfactual_screening(graph, candidate, "some task")
 
 
+def _two_error_node_graph():
+    graph = CausalGraph()
+    graph.add_step(CausalGraphNode(
+        node_id="s1", agent_id="a", step_index=1,
+        otar=StepOTAR("input", "think1", "call", "timeout"),
+        parent_id=None, subtask_id="t1", execution_time_ms=10.0, error_flag=True,
+    ))
+    graph.add_step(CausalGraphNode(
+        node_id="s2", agent_id="a", step_index=2,
+        otar=StepOTAR("input", "think2", "call", "timeout"),
+        parent_id="s1", subtask_id="t1", execution_time_ms=10.0, error_flag=True,
+    ))
+    return graph
+
+
+def test_oracle_picks_earliest_error_node(monkeypatch):
+    """When a failed subtask has several error nodes, the root of the
+    cascade (earliest failing node) must be returned, not the last symptom."""
+    engine = AttributionEngine()
+    graph = _two_error_node_graph()
+    reversed_nodes = sorted(graph.get_all_nodes(), key=lambda n: n.step_index, reverse=True)
+
+    def fake_oracle(prompt: str) -> dict:
+        if "think2" in prompt and "think1" not in prompt:
+            return {"correct": True}
+        return {"correct": False}
+
+    monkeypatch.setattr(engine, "_call_llm_json", fake_oracle)
+    node = engine._oracle_guided_backtracking(graph, reversed_nodes, "solve it")
+    assert node.step_index == 1
+
+
 def test_counterfactual_continuous_score(monkeypatch):
     engine = AttributionEngine()
     crs = _run_counterfactual(engine, {"confidence_pct": 85}, monkeypatch)

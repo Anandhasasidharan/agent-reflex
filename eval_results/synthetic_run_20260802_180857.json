@@ -1,0 +1,279 @@
+{
+  "n_runs": 3,
+  "total_scenarios": 18,
+  "mode_accuracy_mean_pct": 85.2,
+  "mode_accuracy_std_pct": 2.6,
+  "step_accuracy_mean_pct": 38.9,
+  "step_accuracy_std_pct": 4.5,
+  "runs": [
+    {
+      "run": 1,
+      "mode_accuracy_pct": 88.9,
+      "step_accuracy_pct": 38.9
+    },
+    {
+      "run": 2,
+      "mode_accuracy_pct": 83.3,
+      "step_accuracy_pct": 44.4
+    },
+    {
+      "run": 3,
+      "mode_accuracy_pct": 83.3,
+      "step_accuracy_pct": 33.3
+    }
+  ],
+  "details": [
+    {
+      "scenario": "coord_misaligned_assumptions",
+      "true_mode": "coord_misaligned_assumptions",
+      "predicted_mode": "task_hallucination",
+      "mode_correct": false,
+      "true_cause": "step_1",
+      "predicted_cause": "step_3",
+      "step_correct": false,
+      "crs": 0.9,
+      "evidence": [
+        "task_hallucination detected with confidence 0.95",
+        "Correcting step step_3 would change the outcome (CRS=0.90)"
+      ]
+    },
+    {
+      "scenario": "spec_ambiguous",
+      "true_mode": "spec_ambiguous",
+      "predicted_mode": "spec_ambiguous",
+      "mode_correct": true,
+      "true_cause": "step_1",
+      "predicted_cause": "step_2",
+      "step_correct": false,
+      "crs": 0.95,
+      "evidence": [
+        "spec_ambiguous detected with confidence 0.95",
+        "Correcting step step_2 would change the outcome (CRS=0.95)"
+      ]
+    },
+    {
+      "scenario": "task_hallucination",
+      "true_mode": "task_hallucination",
+      "predicted_mode": "task_hallucination",
+      "mode_correct": true,
+      "true_cause": "step_1",
+      "predicted_cause": "step_1",
+      "step_correct": true,
+      "crs": 0.8,
+      "evidence": [
+        "task_hallucination detected with confidence 0.90",
+        "Correcting step step_1 would change the outcome (CRS=0.80)"
+      ]
+    },
+    {
+      "scenario": "infra_rate_limit",
+      "true_mode": "infra_rate_limit",
+      "predicted_mode": "infra_rate_limit",
+      "mode_correct": true,
+      "true_cause": "step_1",
+      "predicted_cause": "step_2",
+      "step_correct": false,
+      "crs": 0.9,
+      "evidence": [
+        "infra_rate_limit detected with confidence 1.00",
+        "Correcting step step_2 would change the outcome (CRS=0.90)"
+      ]
+    },
+    {
+      "scenario": "verif_overconfident",
+      "true_mode": "verif_overconfident",
+      "predicted_mode": "task_hallucination",
+      "mode_correct": false,
+      "true_cause": "step_1",
+      "predicted_cause": "step_1",
+      "step_correct": true,
+      "crs": 0.95,
+      "evidence": [
+        "task_hallucination detected with confidence 0.85",
+        "Correcting step step_1 would change the outcome (CRS=0.95)"
+      ]
+    },
+    {
+      "scenario": "infra_context_window",
+      "true_mode": "infra_context_window",
+      "predicted_mode": "infra_context_window",
+      "mode_correct": true,
+      "true_cause": "step_3",
+      "predicted_cause": "step_3",
+      "step_correct": true,
+      "crs": 0.9,
+      "evidence": [
+        "infra_context_window detected with confidence 1.00",
+        "Correcting step step_3 would change the outcome (CRS=0.90)"
+      ]
+    },
+    {
+      "scenario": "spec_incomplete",
+      "true_mode": "spec_incomplete",
+      "predicted_mode": "spec_incomplete",
+      "mode_correct": true,
+      "true_cause": "step_1",
+      "predicted_cause": "step_2",
+      "step_correct": false,
+      "crs": 0.8,
+      "evidence": [
+        "spec_incomplete detected with confidence 0.90",
+        "Correcting step step_2 would change the outcome (CRS=0.80)"
+      ]
+    },
+    {
+      "scenario": "spec_contradictory",
+      "true_mode": "spec_contradictory",
+      "predicted_mode": "spec_contradictory",
+      "mode_correct": true,
+      "true_cause": "step_1",
+      "predicted_cause": "step_1",
+      "step_correct": true,
+      "crs": 0.9,
+      "evidence": [
+        "spec_contradictory detected with confidence 1.00",
+        "Correcting step step_1 would change the outcome (CRS=0.90)"
+      ]
+    },
+    {
+      "scenario": "spec_missing",
+      "true_mode": "spec_missing",
+      "predicted_mode": "spec_incomplete",
+      "mode_correct": false,
+      "true_cause": "step_1",
+      "predicted_cause": "step_2",
+      "step_correct": false,
+      "crs": 0.95,
+      "evidence": [
+        "spec_incomplete detected with confidence 0.95",
+        "Correcting step step_2 would change the outcome (CRS=0.95)"
+      ]
+    },
+    {
+      "scenario": "coord_misaligned_goals",
+      "true_mode": "coord_misaligned_goals",
+      "predicted_mode": "coord_misaligned_goals",
+      "mode_correct": true,
+      "true_cause": "step_2",
+      "predicted_cause": "step_2",
+      "step_correct": true,
+      "crs": 0.9,
+      "evidence": [
+        "coord_misaligned_goals detected with confidence 0.90",
+        "Correcting step step_2 would change the outcome (CRS=0.90)"
+      ]
+    },
+    {
+      "scenario": "coord_resource_contention",
+      "true_mode": "coord_resource_contention",
+      "predicted_mode": "coord_resource_contention",
+      "mode_correct": true,
+      "true_cause": "step_2",
+      "predicted_cause": "step_2",
+      "step_correct": true,
+      "crs": 0.9,
+      "evidence": [
+        "coord_resource_contention detected with confidence 0.95",
+        "Correcting step step_2 would change the outcome (CRS=0.90)"
+      ]
+    },
+    {
+      "scenario": "coord_deadlock",
+      "true_mode": "coord_deadlock",
+      "predicted_mode": "coord_deadlock",
+      "mode_correct": true,
+      "true_cause": "step_1",
+      "predicted_cause": "step_3",
+      "step_correct": false,
+      "crs": 0.95,
+      "evidence": [
+        "coord_deadlock detected with confidence 1.00",
+        "Correcting step step_3 would change the outcome (CRS=0.95)"
+      ]
+    },
+    {
+      "scenario": "verif_underconfident",
+      "true_mode": "verif_underconfident",
+      "predicted_mode": "verif_underconfident",
+      "mode_correct": true,
+      "true_cause": "step_1",
+      "predicted_cause": "step_2",
+      "step_correct": false,
+      "crs": 0.9,
+      "evidence": [
+        "verif_underconfident detected with confidence 0.95",
+        "Correcting step step_2 would change the outcome (CRS=0.90)"
+      ]
+    },
+    {
+      "scenario": "verif_wrong_criterion",
+      "true_mode": "verif_wrong_criterion",
+      "predicted_mode": "verif_wrong_criterion",
+      "mode_correct": true,
+      "true_cause": "step_1",
+      "predicted_cause": "step_2",
+      "step_correct": false,
+      "crs": 0.85,
+      "evidence": [
+        "verif_wrong_criterion detected with confidence 0.95",
+        "Correcting step step_2 would change the outcome (CRS=0.85)"
+      ]
+    },
+    {
+      "scenario": "verif_self_inconsistent",
+      "true_mode": "verif_self_inconsistent",
+      "predicted_mode": "verif_self_inconsistent",
+      "mode_correct": true,
+      "true_cause": "step_1",
+      "predicted_cause": "step_2",
+      "step_correct": false,
+      "crs": 0.95,
+      "evidence": [
+        "verif_self_inconsistent detected with confidence 0.95",
+        "Correcting step step_2 would change the outcome (CRS=0.95)"
+      ]
+    },
+    {
+      "scenario": "task_derailment",
+      "true_mode": "task_derailment",
+      "predicted_mode": "task_derailment",
+      "mode_correct": true,
+      "true_cause": "step_1",
+      "predicted_cause": "step_2",
+      "step_correct": false,
+      "crs": 0.95,
+      "evidence": [
+        "task_derailment detected with confidence 1.00",
+        "Correcting step step_2 would change the outcome (CRS=0.95)"
+      ]
+    },
+    {
+      "scenario": "infra_cascade_timeout",
+      "true_mode": "infra_cascade_timeout",
+      "predicted_mode": "infra_cascade_timeout",
+      "mode_correct": true,
+      "true_cause": "step_1",
+      "predicted_cause": "step_3",
+      "step_correct": false,
+      "crs": 0.9,
+      "evidence": [
+        "infra_cascade_timeout detected with confidence 0.95",
+        "Correcting step step_3 would change the outcome (CRS=0.90)"
+      ]
+    },
+    {
+      "scenario": "infra_unknown",
+      "true_mode": "infra_unknown",
+      "predicted_mode": "infra_unknown",
+      "mode_correct": true,
+      "true_cause": "step_1",
+      "predicted_cause": "step_2",
+      "step_correct": false,
+      "crs": 0.95,
+      "evidence": [
+        "infra_unknown detected with confidence 0.95",
+        "Correcting step step_2 would change the outcome (CRS=0.95)"
+      ]
+    }
+  ]
+}
