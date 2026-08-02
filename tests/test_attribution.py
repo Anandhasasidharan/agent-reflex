@@ -16,16 +16,16 @@ def _make_node(node_id: str, agent_id: str = "a", step_index: int = 1, error: bo
 def test_attribution_engine_init():
     engine = AttributionEngine()
     assert engine is not None
-    assert engine._client is None
+    assert engine._llm._client is None
 
 
 def test_attribution_client_lazy(monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test-dummy")
     engine = AttributionEngine()
-    assert engine._client is None
-    client = engine.client
+    assert engine._llm._client is None
+    client = engine._llm.client
     assert client is not None
-    assert engine._client is not None
+    assert engine._llm._client is not None
 
 
 def test_oracle_backtracking_no_failures():

@@ -1,31 +1,21 @@
 from __future__ import annotations
 
-from typing import Any
+from difflib import SequenceMatcher
 
 import numpy as np
 from scipy.spatial.distance import cosine
 
 from agent_reflex.common.config import Settings
+from agent_reflex.common.llm import LLMClient
 
 
 class ConsistencyScorer:
     def __init__(self, settings: Settings | None = None) -> None:
         self._settings = settings or Settings()
-        self._client: Any | None = None
-
-    @property
-    def client(self):
-        if self._client is None:
-            import openai
-            self._client = openai.OpenAI(api_key=self._settings.openai_api_key)
-        return self._client
+        self._llm = LLMClient(self._settings)
 
     def _get_embedding(self, text: str) -> list[float]:
-        response = self.client.embeddings.create(
-            model="text-embedding-3-small",
-            input=text,
-        )
-        return response.data[0].embedding
+        return self._llm.embed(text)
 
     def score(self, prompt: str, n_samples: int | None = None) -> float:
         n = n_samples or self._settings.consistency_n_samples
@@ -33,12 +23,11 @@ class ConsistencyScorer:
 
         responses: list[str] = []
         for _ in range(n):
-            response = self.client.chat.completions.create(
-                model="gpt-4o-mini",
+            content = self._llm.chat(
                 messages=[{"role": "user", "content": prompt}],
                 temperature=temperature,
             )
-            responses.append(response.choices[0].message.content or "")
+            responses.append(content)
 
         return self._measure_agreement(responses)
 
@@ -46,21 +35,30 @@ class ConsistencyScorer:
         if len(responses) < 2:
             return 1.0
 
-        embeddings = []
-        for r in responses:
-            try:
-                emb = self._get_embedding(r)
-                embeddings.append(emb)
-            except Exception:
-                continue
+        try:
+            embeddings = [self._get_embedding(r) for r in responses]
+            if len(embeddings) < 2:
+                return 1.0
 
-        if len(embeddings) < 2:
+            similarities = []
+            for i in range(len(embeddings)):
+                for j in range(i + 1, len(embeddings)):
+                    sim = 1.0 - cosine(embeddings[i], embeddings[j])
+                    similarities.append(sim)
+
+            return float(np.mean(similarities)) if similarities else 1.0
+        except Exception:
+            return self._lexical_agreement(responses)
+
+    def _lexical_agreement(self, responses: list[str]) -> float:
+        """Fallback when no embedding provider is available (e.g. DeepSeek)."""
+        if len(responses) < 2:
             return 1.0
 
         similarities = []
-        for i in range(len(embeddings)):
-            for j in range(i + 1, len(embeddings)):
-                sim = 1.0 - cosine(embeddings[i], embeddings[j])
+        for i in range(len(responses)):
+            for j in range(i + 1, len(responses)):
+                sim = SequenceMatcher(None, responses[i], responses[j]).ratio()
                 similarities.append(sim)
 
         return float(np.mean(similarities)) if similarities else 1.0

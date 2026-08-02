@@ -13,6 +13,11 @@ class Settings(BaseSettings):
     otel_semconv_opt_in: str = "gen_ai_latest_experimental"
     redaction_enabled: bool = True
     openai_api_key: str = ""
+    llm_api_key: str = ""
+    llm_base_url: str = "https://api.deepseek.com"
+    llm_model: str = "deepseek-v4-flash"
+    llm_embedding_base_url: str = ""
+    llm_embedding_model: str = "text-embedding-3-small"
     consistency_n_samples: int = 5
     consistency_temperature: float = 0.3
     bandit_epsilon: float = 0.3

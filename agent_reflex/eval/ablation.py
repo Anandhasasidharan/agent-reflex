@@ -11,11 +11,11 @@ Reports mode-level and step-level accuracy delta.
 from __future__ import annotations
 
 import copy
-import os
 from typing import Any
 
 from agent_reflex.attribution.engine import AttributionEngine
 from agent_reflex.common.config import Settings
+from agent_reflex.common.llm import resolve_api_key
 
 from .runner import SYNTHETIC_SCENARIOS, build_graph_from_scenario
 
@@ -23,18 +23,18 @@ from .runner import SYNTHETIC_SCENARIOS, build_graph_from_scenario
 def run_ablation(api_key: str | None = None) -> dict[str, Any]:
     settings = Settings()
 
-    resolved_key = api_key or settings.openai_api_key or os.environ.get("OPENAI_API_KEY", "")
+    resolved_key = api_key or resolve_api_key(settings)
     if not resolved_key:
-        return {"error": "no_api_key", "note": "Set OPENAI_API_KEY to run ablation"}
+        return {"error": "no_api_key", "note": "Set DEEPSEEK_API_KEY or OPENAI_API_KEY to run ablation"}
 
     settings_redacted = copy.deepcopy(settings)
     settings_redacted.redaction_enabled = True
-    settings_redacted.openai_api_key = resolved_key
+    settings_redacted.llm_api_key = resolved_key
     engine_redacted = AttributionEngine(settings=settings_redacted)
 
     settings_plain = copy.deepcopy(settings)
     settings_plain.redaction_enabled = False
-    settings_plain.openai_api_key = resolved_key
+    settings_plain.llm_api_key = resolved_key
     engine_plain = AttributionEngine(settings=settings_plain)
 
     plain_results = _run_suite(engine_plain, "plain (no redaction)")

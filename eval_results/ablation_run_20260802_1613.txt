@@ -1,0 +1,14 @@
+============================================================
+AgentReflex — Redaction Ablation Report
+============================================================
+
+Config                           Mode Acc   Step Acc  Mode#  Step#
+--------------------------------------------------------------
+plain (no redaction)               100.0%      50.0%   6/6    3/6 
+redacted                            83.3%      50.0%   5/6    3/6 
+--------------------------------------------------------------
+Delta (plain - redacted)           +16.7%      +0.0%
+
+Note: Redaction ablates span-level sensitive content (API keys,
+secrets, tokens). A positive delta means redaction reduces accuracy.
+============================================================

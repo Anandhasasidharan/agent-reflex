@@ -14,6 +14,8 @@ from typing import Any
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 from agent_reflex.attribution.engine import AttributionEngine
+from agent_reflex.common.config import Settings
+from agent_reflex.common.llm import resolve_api_key
 from agent_reflex.common.types import CausalGraphNode, StepOTAR
 from agent_reflex.graph.models import CausalGraph
 
@@ -141,12 +143,13 @@ def build_graph_from_scenario(scenario: dict[str, Any]) -> CausalGraph:
 
 
 def run_eval(api_key: str | None = None) -> dict[str, Any]:
+    settings = Settings()
     if api_key:
-        os.environ["AGENT_REFLEX_OPENAI_API_KEY"] = api_key
-    elif not os.environ.get("AGENT_REFLEX_OPENAI_API_KEY") and not os.environ.get("OPENAI_API_KEY"):
-        print("ERROR: No OpenAI API key found. Set OPENAI_API_KEY env var.")
+        os.environ["AGENT_REFLEX_LLM_API_KEY"] = api_key
+    elif not resolve_api_key(settings):
+        print("ERROR: No LLM API key found. Set DEEPSEEK_API_KEY or OPENAI_API_KEY env var.")
         print("Running in structure-only mode (no LLM calls).")
-        return {"error": "no_api_key", "note": "Set OPENAI_API_KEY to run actual eval"}
+        return {"error": "no_api_key", "note": "Set DEEPSEEK_API_KEY or OPENAI_API_KEY to run actual eval"}
 
     engine = AttributionEngine()
 

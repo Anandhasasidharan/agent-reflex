@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import json
 from typing import Any
 
 from agent_reflex.classification.mast_plus import MastPlusClassifier
 from agent_reflex.common.config import Settings
+from agent_reflex.common.llm import LLMClient
 from agent_reflex.common.types import (
     AttributionResult,
     CausalGraphNode,
@@ -66,23 +66,13 @@ class AttributionEngine:
     ) -> None:
         self._settings = settings or Settings()
         self._classifier = classifier or MastPlusClassifier(settings)
-        self._client: Any | None = None
-
-    @property
-    def client(self):
-        if self._client is None:
-            import openai
-            self._client = openai.OpenAI(api_key=self._settings.openai_api_key)
-        return self._client
+        self._llm = LLMClient(self._settings)
 
     def _call_llm_json(self, prompt: str) -> dict[str, Any]:
-        response = self.client.chat.completions.create(
-            model="gpt-4o-mini",
+        return self._llm.chat_json(
             messages=[{"role": "user", "content": prompt}],
-            response_format={"type": "json_object"},
             temperature=0.1,
         )
-        return json.loads(response.choices[0].message.content)
 
     def attribute(
         self,
@@ -186,8 +176,7 @@ class AttributionEngine:
         node: CausalGraphNode,
         task_context: str,
     ) -> str:
-        response = self.client.chat.completions.create(
-            model="gpt-4o-mini",
+        return self._llm.chat(
             messages=[
                 {
                     "role": "system",
@@ -206,4 +195,3 @@ class AttributionEngine:
             ],
             temperature=0.1,
         )
-        return response.choices[0].message.content or ""

@@ -10,3 +10,6 @@ mynotes.docx
 venv/
 .venv/
 .env
+
+# opencode session exports
+*.docx

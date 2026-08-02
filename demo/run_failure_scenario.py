@@ -4,7 +4,7 @@ AgentReflex Demo — Run a simulated multi-agent failure, observe attribution + 
 Usage:
     python demo/run_failure_scenario.py
 
-Requires OPENAI_API_KEY in environment.
+Requires DEEPSEEK_API_KEY or OPENAI_API_KEY in environment.
 """
 
 import os
@@ -87,10 +87,10 @@ def build_sample_failure_graph() -> CausalGraph:
 
 
 def main() -> None:
-    api_key = os.environ.get("OPENAI_API_KEY")
+    api_key = os.environ.get("DEEPSEEK_API_KEY") or os.environ.get("OPENAI_API_KEY")
     if not api_key:
-        print("ERROR: OPENAI_API_KEY environment variable not set.")
-        print("Usage: OPENAI_API_KEY=sk-... python demo/run_failure_scenario.py")
+        print("ERROR: No LLM API key found. Set DEEPSEEK_API_KEY or OPENAI_API_KEY.")
+        print("Usage: DEEPSEEK_API_KEY=sk-... python demo/run_failure_scenario.py")
         sys.exit(1)
 
     print("=" * 60)

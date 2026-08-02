@@ -46,6 +46,8 @@ def test_redact_non_string_value():
 def test_ablation_runner_structure(monkeypatch):
     monkeypatch.delenv("AGENT_REFLEX_OPENAI_API_KEY", raising=False)
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
+    monkeypatch.delenv("AGENT_REFLEX_LLM_API_KEY", raising=False)
     result = run_ablation()
     assert "error" in result
     assert result["error"] == "no_api_key"

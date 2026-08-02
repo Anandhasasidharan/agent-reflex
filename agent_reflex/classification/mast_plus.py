@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from typing import Any
-
 from agent_reflex.common.config import Settings
+from agent_reflex.common.llm import LLMClient
 from agent_reflex.common.types import MastMode, MastPlusLabel
 
 MAST_EXAMPLES: list[dict] = [
@@ -96,14 +95,7 @@ Trace to classify:
 class MastPlusClassifier:
     def __init__(self, settings: Settings | None = None) -> None:
         self._settings = settings or Settings()
-        self._client: Any | None = None
-
-    @property
-    def client(self):
-        if self._client is None:
-            import openai
-            self._client = openai.OpenAI(api_key=self._settings.openai_api_key)
-        return self._client
+        self._llm = LLMClient(self._settings)
 
     def classify(self, trace_text: str) -> MastPlusLabel:
         examples_text = "\n\n".join(
@@ -112,18 +104,14 @@ class MastPlusClassifier:
         )
         prompt = MAST_FEW_SHOT_PROMPT.format(examples=examples_text, trace=trace_text)
 
-        response = self.client.chat.completions.create(
-            model="gpt-4o-mini",
+        result = self._llm.chat_json(
             messages=[
                 {"role": "system", "content": "You classify multi-agent failures precisely."},
                 {"role": "user", "content": prompt},
             ],
-            response_format={"type": "json_object"},
             temperature=0.1,
         )
 
-        import json
-        result = json.loads(response.choices[0].message.content)
         mode = MastMode(result["mode"])
         return MastPlusLabel(mode=mode, confidence=result.get("confidence", 0.0))
 

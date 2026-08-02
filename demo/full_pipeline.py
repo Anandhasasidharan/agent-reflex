@@ -11,7 +11,7 @@ Demonstrates:
   7. Reliability score update
 
 Usage:
-    OPENAI_API_KEY=sk-... python demo/full_pipeline.py
+    DEEPSEEK_API_KEY=sk-... python demo/full_pipeline.py
 """
 
 from __future__ import annotations
@@ -100,9 +100,9 @@ def build_failure_graph() -> tuple[CausalGraph, str]:
 
 
 def main() -> None:
-    api_key = os.environ.get("OPENAI_API_KEY")
+    api_key = os.environ.get("DEEPSEEK_API_KEY") or os.environ.get("OPENAI_API_KEY")
     if not api_key:
-        print("ERROR: Set OPENAI_API_KEY=sk-...")
+        print("ERROR: Set DEEPSEEK_API_KEY=sk-... (or OPENAI_API_KEY)")
         sys.exit(1)
 
     print("=" * 72)

@@ -51,6 +51,8 @@ def test_scenario_graph_has_expected_structure():
 def test_run_eval_no_api_key(monkeypatch):
     monkeypatch.delenv("AGENT_REFLEX_OPENAI_API_KEY", raising=False)
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
+    monkeypatch.delenv("AGENT_REFLEX_LLM_API_KEY", raising=False)
     result = run_eval()
     assert "error" in result
     assert result["error"] == "no_api_key"
@@ -59,17 +61,21 @@ def test_run_eval_no_api_key(monkeypatch):
 def test_main_no_api_key(monkeypatch):
     monkeypatch.delenv("AGENT_REFLEX_OPENAI_API_KEY", raising=False)
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
+    monkeypatch.delenv("AGENT_REFLEX_LLM_API_KEY", raising=False)
     captured = io.StringIO()
     sys.stdout = captured
     main()
     sys.stdout = sys.__stdout__
     output = captured.getvalue()
-    assert "No OpenAI API key" in output
+    assert "No LLM API key found" in output
 
 
 def test_ablation_main_no_api_key(monkeypatch):
     monkeypatch.delenv("AGENT_REFLEX_OPENAI_API_KEY", raising=False)
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
+    monkeypatch.delenv("AGENT_REFLEX_LLM_API_KEY", raising=False)
     result = run_ablation()
     assert "error" in result
     assert result["error"] == "no_api_key"

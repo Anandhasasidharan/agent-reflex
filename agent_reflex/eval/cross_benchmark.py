@@ -7,11 +7,11 @@ Runs the attribution engine against both Who&When and TraceElephant
 
 from __future__ import annotations
 
-import os
 from typing import Any
 
 from agent_reflex.attribution.engine import AttributionEngine
 from agent_reflex.common.config import Settings
+from agent_reflex.common.llm import resolve_api_key
 
 from .traceelephant import run_traceelephant
 from .whowhen import run_whowhen
@@ -19,11 +19,11 @@ from .whowhen import run_whowhen
 
 def run_cross_benchmark(api_key: str | None = None) -> dict[str, Any]:
     settings = Settings()
-    resolved_key = api_key or settings.openai_api_key or os.environ.get("OPENAI_API_KEY", "")
+    resolved_key = api_key or resolve_api_key(settings)
     if not resolved_key:
-        return {"error": "no_api_key", "note": "Set OPENAI_API_KEY to run cross-benchmark eval"}
+        return {"error": "no_api_key", "note": "Set DEEPSEEK_API_KEY or OPENAI_API_KEY to run cross-benchmark eval"}
 
-    settings.openai_api_key = resolved_key
+    settings.llm_api_key = resolved_key
     engine = AttributionEngine(settings=settings)
 
     whowhen_result = run_whowhen(engine)

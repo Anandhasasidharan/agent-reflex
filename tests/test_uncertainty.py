@@ -5,7 +5,7 @@ from agent_reflex.uncertainty.consistency import ConsistencyScorer, UncertaintyE
 
 def test_scorer_init():
     scorer = ConsistencyScorer()
-    assert scorer._client is None
+    assert scorer._llm._client is None
     assert scorer._settings.consistency_n_samples == 5
 
 
@@ -25,6 +25,24 @@ def test_measure_agreement_empty():
     scorer = ConsistencyScorer()
     score = scorer._measure_agreement([])
     assert score == 1.0
+
+
+def test_lexical_fallback_same():
+    scorer = ConsistencyScorer()
+    score = scorer._measure_agreement(["Paris", "Paris", "Paris"])
+    assert score == 1.0
+
+
+def test_lexical_fallback_different():
+    scorer = ConsistencyScorer()
+    score = scorer._measure_agreement(["Paris", "Tokyo", "Berlin"])
+    assert score < 0.5
+
+
+def test_lexical_agreement_mixed():
+    scorer = ConsistencyScorer()
+    score = scorer._lexical_agreement(["yes", "yes", "no"])
+    assert 0.0 < score < 1.0
 
 
 def test_escalation_controller_defaults():

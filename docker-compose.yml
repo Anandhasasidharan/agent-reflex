@@ -40,7 +40,10 @@ services:
       context: .
       dockerfile: Dockerfile
     environment:
-      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      AGENT_REFLEX_LLM_BASE_URL: ${AGENT_REFLEX_LLM_BASE_URL:-https://api.deepseek.com}
+      AGENT_REFLEX_LLM_MODEL: ${AGENT_REFLEX_LLM_MODEL:-deepseek-v4-flash}
       OTEL_SEMCONV_STABILITY_OPT_IN: gen_ai_latest_experimental
       AGENT_REFLEX_DB_URL: postgresql://reflex:reflex_dev@postgres:5432/agent_reflex
       AGENT_REFLEX_NEO4J_URI: bolt://neo4j:7687

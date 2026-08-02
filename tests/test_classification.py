@@ -30,6 +30,6 @@ def test_prompt_template_renders():
 def test_classifier_lazy_client(monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test-dummy")
     classifier = MastPlusClassifier()
-    assert classifier._client is None
-    classifier.client
-    assert classifier._client is not None
+    assert classifier._llm._client is None
+    classifier._llm.client
+    assert classifier._llm._client is not None

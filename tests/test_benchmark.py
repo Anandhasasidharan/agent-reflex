@@ -224,6 +224,8 @@ def test_traceelephant_loader_individual_json_without_steps():
 def test_whowhen_runner_no_data(monkeypatch):
     monkeypatch.delenv("AGENT_REFLEX_OPENAI_API_KEY", raising=False)
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
+    monkeypatch.delenv("AGENT_REFLEX_LLM_API_KEY", raising=False)
     result = run_whowhen(None)
     assert "error" in result
     assert result["error"] == "data_not_found"
@@ -232,6 +234,8 @@ def test_whowhen_runner_no_data(monkeypatch):
 def test_traceelephant_runner_no_data(monkeypatch):
     monkeypatch.delenv("AGENT_REFLEX_OPENAI_API_KEY", raising=False)
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
+    monkeypatch.delenv("AGENT_REFLEX_LLM_API_KEY", raising=False)
     result = run_traceelephant(None)
     assert "error" in result
     assert result["error"] == "data_not_found"
@@ -240,6 +244,8 @@ def test_traceelephant_runner_no_data(monkeypatch):
 def test_cross_benchmark_no_api_key(monkeypatch):
     monkeypatch.delenv("AGENT_REFLEX_OPENAI_API_KEY", raising=False)
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
+    monkeypatch.delenv("AGENT_REFLEX_LLM_API_KEY", raising=False)
     result = run_cross_benchmark()
     assert "error" in result
     assert result["error"] == "no_api_key"

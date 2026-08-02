@@ -1,0 +1,40 @@
+============================================================
+AgentReflex Eval — Attribution Accuracy Report
+============================================================
+
+Test set: 6 synthetic scenarios
+
+  Running: coord_misaligned_assumptions... ✗ mode, ✗ step
+  Running: spec_ambiguous... ✓ mode, ✓ step
+  Running: task_hallucination... ✓ mode, ✓ step
+  Running: infra_rate_limit... ✓ mode, ✗ step
+  Running: verif_overconfident... ✗ mode, ✓ step
+  Running: infra_context_window... ✓ mode, ✓ step
+
+Results:
+  Mode-level accuracy:  66.7% (4/6)
+  Step-level accuracy:  66.7% (4/6)
+
+Per-scenario breakdown:
+Scenario                       True Mode                 Predicted                 CRS    Match 
+----------------------------------------------------------------------------------------------------
+coord_misaligned_assumptions   coord_misaligned_assumptions task_hallucination        0.90   ✗     
+spec_ambiguous                 spec_ambiguous            spec_ambiguous            0.95   ✓     
+task_hallucination             task_hallucination        task_hallucination        0.95   ✓     
+infra_rate_limit               infra_rate_limit          infra_rate_limit          0.95   ✓     
+verif_overconfident            verif_overconfident       verif_underconfident      0.85   ✗     
+infra_context_window           infra_context_window      infra_context_window      0.95   ✓     
+
+                              coord_misaligned_assinfra_context_windowinfra_rate_limit    spec_ambiguous      task_hallucination  verif_overconfident verif_underconfident
+coord_misaligned_assumptions  0                   0                   0                   0                   1                   0                   0                   
+infra_context_window          0                   1                   0                   0                   0                   0                   0                   
+infra_rate_limit              0                   0                   1                   0                   0                   0                   0                   
+spec_ambiguous                0                   0                   0                   1                   0                   0                   0                   
+task_hallucination            0                   0                   0                   0                   1                   0                   0                   
+verif_overconfident           0                   0                   0                   0                   0                   0                   1                   
+verif_underconfident          0                   0                   0                   0                   0                   0                   0                   
+
+============================================================
+Note: These are synthetic scenarios designed to test specific
+failure modes. Real-world Who&When benchmark results will differ.
+============================================================
