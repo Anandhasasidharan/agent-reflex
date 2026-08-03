@@ -24,8 +24,20 @@ def test_dev_defaults_pass_validation():
     ],
 )
 def test_production_fails_fast_without_secrets(env_overrides, missing, monkeypatch):
-    monkeypatch.delenv("AGENT_REFLEX_OPENAI_API_KEY", raising=False)
-    monkeypatch.delenv("AGENT_REFLEX_LLM_API_KEY", raising=False)
+    # Hermetic: CI sets AGENT_REFLEX_DB_URL etc., which would mask the
+    # dev-credential checks — clear every settings env var first.
+    for env_name in (
+        "AGENT_REFLEX_DB_URL",
+        "AGENT_REFLEX_NEO4J_PASS",
+        "AGENT_REFLEX_NEO4J_URI",
+        "AGENT_REFLEX_NEO4J_USER",
+        "AGENT_REFLEX_OTEL_ENDPOINT",
+        "AGENT_REFLEX_OPENAI_API_KEY",
+        "AGENT_REFLEX_LLM_API_KEY",
+        "AGENT_REFLEX_LLM_BASE_URL",
+        "AGENT_REFLEX_LLM_MODEL",
+    ):
+        monkeypatch.delenv(env_name, raising=False)
     kwargs = {"env": "production", **env_overrides}
     with pytest.raises(RuntimeError) as exc:
         Settings(**kwargs).validate_production()
