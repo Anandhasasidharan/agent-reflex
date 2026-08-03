@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes, useNavigate } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useNavigate } from "react-router";
 import type { ReactNode } from "react";
 import { AuthProvider, useAuth } from "./lib/auth";
 import { Layout } from "./components/Layout";

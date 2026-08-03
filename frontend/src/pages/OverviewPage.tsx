@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { useAuthRedirect } from "../App";
