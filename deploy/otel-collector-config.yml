@@ -16,7 +16,7 @@ processors:
 
 exporters:
   otlphttp/agentreflex:
-    endpoint: http://app:8000
+    endpoint: ${env:AGENT_REFLEX_API_ENDPOINT:-http://app:8000}
     tls:
       insecure: true
     compression: none

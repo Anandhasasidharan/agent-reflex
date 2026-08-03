@@ -137,11 +137,17 @@ async def otlp_receive(request: Request) -> dict[str, Any]:
     for trace_id, graph in traces:
         if not graph.get_all_nodes():
             continue
-        result = _attribution_engine.attribute(
-            session_id=trace_id,
-            graph=graph,
-            task_context=_task_context_for(graph),
-        )
+        result = None
+        try:
+            result = _attribution_engine.attribute(
+                session_id=trace_id,
+                graph=graph,
+                task_context=_task_context_for(graph),
+            )
+        except Exception as exc:
+            # LLM attribution is best-effort: a provider outage must not
+            # reject the trace — persist it, mark the failure_type unknown.
+            request.app.state.last_attribution_error = f"{type(exc).__name__}: {exc}"
         if _db is not None:
             _db.save_session(
                 session_id=trace_id,
