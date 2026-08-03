@@ -27,8 +27,10 @@ def load_whowhen_traces(path: str = WHO_WHEN_DATA_PATH) -> list[dict[str, Any]]:
         data = json.load(f)
     if isinstance(data, list):
         return data
-    if isinstance(data, dict) and "traces" in data:
-        return data["traces"]
+    if isinstance(data, dict):
+        traces = data.get("traces")
+        if isinstance(traces, list):
+            return traces
     return []
 
 

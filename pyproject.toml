@@ -33,6 +33,7 @@ dev = [
     "pytest-asyncio>=0.24",
     "ruff>=0.4",
     "mypy>=1.9",
+    "types-networkx>=3.6",
     "pre-commit>=3.7",
 ]
 langgraph = ["langgraph>=0.2.0", "langchain-core>=0.3.0"]
@@ -54,6 +55,11 @@ python_version = "3.11"
 strict = true
 warn_unused_ignores = true
 exclude = ["tests/", "demo/"]
+
+[[tool.mypy.overrides]]
+# scipy/sklearn ship no type stubs; networkx has types-networkx.
+module = ["scipy.*", "sklearn.*"]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

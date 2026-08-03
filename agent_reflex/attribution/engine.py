@@ -226,7 +226,7 @@ class AttributionEngine:
 
         result = self._call_llm_json(prompt)
         confidence_pct = result.get("confidence_pct")
-        if confidence_pct is not None:
+        if isinstance(confidence_pct, (int, float)):
             return min(max(confidence_pct / 100.0, 0.0), 1.0)
         return 0.95 if result.get("outcome_would_change", False) else 0.15
 

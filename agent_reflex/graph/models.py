@@ -34,7 +34,7 @@ class OTARParser:
 
 class CausalGraph:
     def __init__(self) -> None:
-        self._graph: nx.DiGraph = nx.DiGraph()
+        self._graph: nx.DiGraph[str] = nx.DiGraph()
         self._nodes: dict[str, CausalGraphNode] = {}
 
     def add_step(self, node: CausalGraphNode) -> str:

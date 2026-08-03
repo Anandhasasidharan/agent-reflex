@@ -20,8 +20,8 @@ def _get_tracer() -> trace.Tracer:
     return _tracer
 
 
-def instrument_agent(name: str | None = None) -> Callable:
-    def decorator(func: Callable) -> Callable:
+def instrument_agent(name: str | None = None) -> Callable[..., Any]:
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         @functools.wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
             agent_name = name or func.__name__
@@ -49,8 +49,8 @@ def instrument_agent(name: str | None = None) -> Callable:
     return decorator
 
 
-def instrument_tool(tool_name: str | None = None) -> Callable:
-    def decorator(func: Callable) -> Callable:
+def instrument_tool(tool_name: str | None = None) -> Callable[..., Any]:
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         @functools.wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
             tname = tool_name or func.__name__
@@ -84,8 +84,8 @@ def instrument_chat(
     cache_read_tokens: int | None = None,
     cache_creation_tokens: int | None = None,
     time_to_first_chunk_ms: float | None = None,
-) -> Callable:
-    def decorator(func: Callable) -> Callable:
+) -> Callable[..., Any]:
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         @functools.wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
             tracer = _get_tracer()

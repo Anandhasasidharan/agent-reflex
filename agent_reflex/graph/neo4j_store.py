@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from neo4j import Driver, GraphDatabase, Session
+from neo4j import Driver, GraphDatabase, ManagedTransaction
 
 from agent_reflex.common.config import Settings
+from agent_reflex.common.types import CausalGraphNode
 
-from .models import CausalGraph, CausalGraphNode
+from .models import CausalGraph
 
 
 class Neo4jGraphStore:
@@ -24,7 +25,7 @@ class Neo4jGraphStore:
             session.execute_write(self._create_graph_tx, session_id, graph)
 
     @staticmethod
-    def _create_graph_tx(tx: Session, session_id: str, graph: CausalGraph) -> None:
+    def _create_graph_tx(tx: ManagedTransaction, session_id: str, graph: CausalGraph) -> None:
         tx.run("MERGE (:Session {id: $sid})", sid=session_id)
         for node in graph.get_all_nodes():
             tx.run(
@@ -71,7 +72,7 @@ class Neo4jGraphStore:
             return result
 
     @staticmethod
-    def _load_graph_tx(tx: Session, session_id: str) -> CausalGraph | None:
+    def _load_graph_tx(tx: ManagedTransaction, session_id: str) -> CausalGraph | None:
         nodes_result = tx.run(
             """
             MATCH (n:Step {session_id: $sid})

@@ -119,7 +119,7 @@ agent_reflex/
 ├── demo/                # Full pipeline demo + HTML graph viewer
 ├── grafana/             # Auto-provisioned Grafana 6-panel dashboard
 ├── tests/               # 165 tests (pytest, pytest-cov, all passing)
-└── .github/workflows/   # CI: ruff → pytest (3.11 + 3.12)
+└── .github/workflows/   # CI: ruff → mypy → pytest (3.11 + 3.12); CD: GHCR image
 ```
 
 ## Key Results
@@ -240,11 +240,18 @@ DEEPSEEK_API_KEY=sk-... python -m agent_reflex.eval.ablation
 DEEPSEEK_API_KEY=sk-... python -m agent_reflex.eval.cross_benchmark
 ```
 
-### CI Pipeline (GitHub Actions)
+### CI/CD (GitHub Actions)
 
-`.github/workflows/ci.yml` runs on push/PR to `main`:
-1. **Lint** — `ruff check .` on ubuntu-latest (Python 3.11)
-2. **Test** — `pytest --cov=agent_reflex` on Python 3.11 + 3.12 with a Postgres 16 service container
+`.github/workflows/ci.yml` runs on push/PR to `master`:
+1. **Lint** — `ruff check .` + `mypy agent_reflex` (strict) on Python 3.12
+2. **Test** — `pytest --cov=agent_reflex` on Python 3.11 + 3.12 with a Postgres 16 service container, coverage uploaded to Codecov
+3. **Build** — verifies the production Docker image builds
+
+`.github/workflows/cd.yml` runs on push to `master`: builds the image with Buildx (GitHub Actions cache), pushes to GHCR (`ghcr.io/Anandhasasidharan/agent-reflex`) tagged `latest` + commit SHA. Deploy the image with:
+
+```bash
+docker pull ghcr.io/Anandhasasidharan/agent-reflex:latest
+```
 
 ## OTel Configuration
 

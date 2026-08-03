@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any
 
@@ -28,7 +29,7 @@ _reliability_history: dict[str, list[float]] = {}
 
 
 @asynccontextmanager
-async def lifespan(application: FastAPI):
+async def lifespan(application: FastAPI) -> AsyncIterator[None]:
     global _attribution_engine, _db
     _attribution_engine = AttributionEngine()
     try:

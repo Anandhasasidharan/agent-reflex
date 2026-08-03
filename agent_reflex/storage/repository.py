@@ -178,4 +178,4 @@ class PostgresRepository:
                 .group_by(SessionRecord.failure_type)
                 .all()
             )
-            return {r.failure_type: r.count for r in results}
+            return {r[0]: int(r[1]) for r in results}

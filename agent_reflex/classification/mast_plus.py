@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+from typing import Any
+
 from agent_reflex.common.config import Settings
 from agent_reflex.common.llm import LLMClient
 from agent_reflex.common.types import MastMode, MastPlusLabel
 
-MAST_EXAMPLES: list[dict] = [
+MAST_EXAMPLES: list[dict[str, str]] = [
     {
         "trace": "Agent A was asked to generate a SQL query but produced Python code instead because the task description said 'query the database' without specifying the query language.",
         "label": "spec_ambiguous",
@@ -143,7 +145,7 @@ class MastPlusClassifier:
         mode = MastMode(result["mode"])
         return MastPlusLabel(mode=mode, confidence=result.get("confidence", 0.0))
 
-    def classify_from_graph(self, graph_dict: dict) -> MastPlusLabel:
+    def classify_from_graph(self, graph_dict: dict[str, Any]) -> MastPlusLabel:
         steps = graph_dict.get("nodes", [])
         steps = sorted(steps, key=lambda s: s["step_index"])
         trace_parts = []

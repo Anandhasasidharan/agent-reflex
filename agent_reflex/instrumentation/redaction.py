@@ -3,10 +3,9 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from opentelemetry.sdk.trace import ReadableSpan, Span
-from opentelemetry.sdk.trace.export import SpanProcessor
+from opentelemetry.sdk.trace import ReadableSpan, Span, SpanProcessor
 
-SENSITIVE_PATTERNS: list[re.Pattern] = [
+SENSITIVE_PATTERNS: list[re.Pattern[str]] = [
     re.compile(r"(api[_-]?key|apikey|secret|password|auth)['\"]?\s*[:=]\s*['\"][^'\"]+['\"]", re.IGNORECASE),
     re.compile(r"sk-[a-zA-Z0-9]{10,}", re.IGNORECASE),
     re.compile(r"\b[A-Za-z0-9+/]{40,}={0,2}\b"),

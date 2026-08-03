@@ -42,7 +42,10 @@ def extract_json(content: str) -> dict[str, Any]:
         raise ValueError(f"no JSON object found in response: {content[:200]!r}")
 
     try:
-        return json.loads(candidate[start : end + 1])
+        parsed = json.loads(candidate[start : end + 1])
+        if not isinstance(parsed, dict):
+            raise ValueError(f"JSON response is not an object: {candidate[start : end + 1][:200]!r}")
+        return parsed
     except json.JSONDecodeError:
         raise ValueError(f"invalid JSON in response: {candidate[start : end + 1][:200]!r}")
 
@@ -59,7 +62,7 @@ class LLMClient:
         self._client: Any | None = None
 
     @property
-    def client(self):
+    def client(self) -> Any:
         if self._client is None:
             import openai
             self._client = openai.OpenAI(
@@ -119,4 +122,4 @@ class LLMClient:
             model=self._settings.llm_embedding_model,
             input=text,
         )
-        return response.data[0].embedding
+        return list(response.data[0].embedding)
