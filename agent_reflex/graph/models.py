@@ -10,13 +10,105 @@ from agent_reflex.common.types import CausalGraphEdge, CausalGraphNode, StepOTAR
 
 
 class OTARParser:
+    """Parse OTAR (Observation-Thought-Action-Result) fields from OTel spans.
+
+    Follows the canonical schema in docs/otel_ingestion_schema.md: standard
+    GenAI semconv attributes (gen_ai.*) plus the agent_reflex.* extension
+    namespace. Accepts both the OTel SDK's ReadableSpan.to_json() attribute
+    dict format and the OTLP/HTTP JSON wire format (list of {key, value}).
+    """
+
     @staticmethod
-    def parse(span_attributes: dict[str, Any]) -> StepOTAR:
+    def _normalize_attributes(attrs: Any) -> dict[str, Any]:
+        """Accept either an SDK dict or an OTLP list of {key, value} pairs."""
+        if isinstance(attrs, dict):
+            return attrs
+        if isinstance(attrs, list):
+            normalized: dict[str, Any] = {}
+            for item in attrs:
+                if isinstance(item, dict) and "key" in item:
+                    value = item.get("value", {})
+                    if isinstance(value, dict):
+                        # OTLP AnyValue: {"stringValue": ...} | {"intValue": ...}
+                        normalized[item["key"]] = (
+                            value.get("stringValue")
+                            or value.get("intValue")
+                            or value.get("doubleValue")
+                            or value.get("boolValue")
+                            or ""
+                        )
+                    else:
+                        normalized[item["key"]] = value
+            return normalized
+        return {}
+
+    @staticmethod
+    def _messages_content(raw: Any) -> str:
+        """Extract concatenated content from a gen_ai.*.messages JSON array."""
+        if not raw:
+            return ""
+        if isinstance(raw, str):
+            try:
+                parsed = json.loads(raw)
+            except json.JSONDecodeError:
+                return raw
+            if isinstance(parsed, list):
+                parts = []
+                for message in parsed:
+                    if isinstance(message, dict):
+                        content = message.get("content", "")
+                        if isinstance(content, list):
+                            content = " ".join(
+                                str(c.get("text", "")) if isinstance(c, dict) else str(c)
+                                for c in content
+                            )
+                        parts.append(str(content))
+                return "\n".join(p for p in parts if p)
+            return raw
+        return str(raw)
+
+    @staticmethod
+    def _event_content(events: Any, name: str) -> str:
+        if isinstance(events, list):
+            for event in events:
+                if isinstance(event, dict) and event.get("name") == name:
+                    attrs = OTARParser._normalize_attributes(event.get("attributes", {}))
+                    return str(attrs.get("content", ""))
+        return ""
+
+    @classmethod
+    def parse(
+        cls,
+        span_attributes: dict[str, Any],
+        events: Any = None,
+        span_name: str = "",
+    ) -> StepOTAR:
+        attrs = cls._normalize_attributes(span_attributes)
+        event_observation = cls._event_content(events, "gen_ai.prompt")
+        event_result = cls._event_content(events, "gen_ai.completion")
+
+        observation = (
+            event_observation
+            or cls._messages_content(attrs.get("gen_ai.input.messages"))
+            or str(attrs.get("gen_ai.request.prompt", ""))
+        )
+        result = (
+            event_result
+            or cls._messages_content(attrs.get("gen_ai.output.messages"))
+            or str(attrs.get("gen_ai.completion", ""))
+        )
+        action = str(
+            attrs.get("gen_ai.operation.name")
+            or attrs.get("gen_ai.operation")
+            or span_name
+            or ""
+        )
+        thought = str(attrs.get("agent_reflex.agent.thought", ""))
         return StepOTAR(
-            observation=span_attributes.get("input", ""),
-            thought=span_attributes.get("agent.thought", ""),
-            action=span_attributes.get("agent.action", span_attributes.get("agent.action.type", "unknown")),
-            result=span_attributes.get("output", span_attributes.get("agent.artifact", "")),
+            observation=observation,
+            thought=thought,
+            action=action,
+            result=result,
         )
 
     @staticmethod

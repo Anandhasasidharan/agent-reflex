@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import json
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel
 
 from agent_reflex.attribution.engine import AttributionEngine
@@ -28,6 +29,15 @@ _recovery_log: list[dict[str, Any]] = []
 _reliability_history: dict[str, list[float]] = {}
 
 
+def _task_context_for(graph: CausalGraph) -> str:
+    """Best-effort task description from the first span's observation."""
+    nodes = sorted(graph.get_all_nodes(), key=lambda n: n.step_index)
+    if not nodes:
+        return ""
+    observation = nodes[0].otar.observation
+    return (observation or nodes[0].otar.thought or "")[:1000]
+
+
 @asynccontextmanager
 async def lifespan(application: FastAPI) -> AsyncIterator[None]:
     global _attribution_engine, _db
@@ -47,6 +57,76 @@ app = FastAPI(title="AgentReflex", version="0.1.0", lifespan=lifespan)
 async def health() -> dict[str, str]:
     db_status = "connected" if _db is not None else "unavailable"
     return {"status": "ok", "db": db_status}
+
+
+@app.get("/ready")
+async def ready() -> dict[str, Any]:
+    """Readiness: the service can actually serve (DB reachable)."""
+    from agent_reflex.common.config import Settings
+
+    if _db is None:
+        return {"status": "not_ready", "reason": "database_unavailable"}
+    try:
+        from sqlalchemy import text
+
+        with _db._session() as db:
+            db.execute(text("SELECT 1"))
+    except Exception as exc:
+        return {"status": "not_ready", "reason": f"database_unreachable: {type(exc).__name__}"}
+    settings = Settings()
+    from agent_reflex.common.llm import resolve_api_key
+
+    has_llm = bool(resolve_api_key(settings))
+    return {"status": "ready", "db": "connected", "llm_configured": has_llm}
+
+
+@app.post("/v1/traces")
+async def otlp_receive(request: Request) -> dict[str, Any]:
+    """OTLP/HTTP receiver (ExportTraceServiceRequest).
+
+    Parses real OTel spans forwarded by a collector — protobuf (the actual
+    OTLP wire format) or JSON — reconstructs one CausalGraph per trace, runs
+    real attribution, and persists to Postgres.
+    """
+    from agent_reflex.graph.span_ingest import parse_otlp_json, parse_otlp_protobuf
+
+    if _attribution_engine is None:
+        raise HTTPException(status_code=503, detail="Attribution engine not initialized")
+
+    raw = await request.body()
+    content_type = request.headers.get("content-type", "")
+    try:
+        if "protobuf" in content_type:
+            traces = parse_otlp_protobuf(raw)
+        else:
+            payload = json.loads(raw)
+            traces = parse_otlp_json(payload)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"invalid OTLP payload: {exc}")
+
+    if not traces:
+        return {"partialSuccess": {"rejectedSpans": 0, "errorMessage": ""}}
+
+    ingested = 0
+    for trace_id, graph in traces:
+        if not graph.get_all_nodes():
+            continue
+        result = _attribution_engine.attribute(
+            session_id=trace_id,
+            graph=graph,
+            task_context=_task_context_for(graph),
+        )
+        if _db is not None:
+            _db.save_session(
+                session_id=trace_id,
+                agent_id="otlp_receiver",
+                task_description=_task_context_for(graph),
+                graph=graph,
+                attribution=result,
+            )
+        ingested += 1
+
+    return {"partialSuccess": {"rejectedSpans": 0, "errorMessage": ""}, "ingested_traces": ingested}
 
 
 class TraceInput(BaseModel):

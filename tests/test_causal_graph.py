@@ -1,19 +1,40 @@
+import json
+
 from agent_reflex.common.types import CausalGraphNode, StepOTAR
 from agent_reflex.graph.models import CausalGraph, OTARParser
 
 
 def test_otar_parser_from_attributes():
     attrs = {
-        "input": "What is the capital of France?",
-        "agent.thought": "I need to recall geography facts",
-        "agent.action": "retrieve_memory",
-        "output": "Paris",
+        "gen_ai.system": "langgraph",
+        "gen_ai.operation.name": "chat",
+        "gen_ai.request.prompt": "What is the capital of France?",
+        "gen_ai.completion": "Paris",
+        "agent_reflex.agent.thought": "I need to recall geography facts",
+        "agent_reflex.agent.id": "researcher",
     }
     otar = OTARParser.parse(attrs)
     assert otar.observation == "What is the capital of France?"
     assert otar.thought == "I need to recall geography facts"
-    assert otar.action == "retrieve_memory"
+    assert otar.action == "chat"
     assert otar.result == "Paris"
+
+
+def test_otar_parser_from_messages_json():
+    attrs = {
+        "gen_ai.input.messages": json.dumps([
+            {"role": "user", "content": "Tell me about Paris"},
+            {"role": "user", "content": "Include museums"},
+        ]),
+        "gen_ai.output.messages": json.dumps([
+            {"role": "assistant", "content": "Paris has the Louvre."},
+        ]),
+        "gen_ai.operation.name": "chat",
+    }
+    otar = OTARParser.parse(attrs)
+    assert "Tell me about Paris" in otar.observation
+    assert "Include museums" in otar.observation
+    assert "Louvre" in otar.result
 
 
 def test_otar_parser_from_span_events():
@@ -31,6 +52,24 @@ def test_otar_parser_from_span_events_empty():
     otar = OTARParser.from_span_events([])
     assert otar.observation == ""
     assert otar.result == ""
+
+
+def test_otar_parser_otlp_list_attributes():
+    attrs = [
+        {"key": "gen_ai.system", "value": {"stringValue": "crewai"}},
+        {"key": "gen_ai.operation.name", "value": {"stringValue": "call_tool"}},
+        {"key": "agent_reflex.agent.id", "value": {"stringValue": "worker"}},
+    ]
+    otar = OTARParser.parse(attrs, span_name="agent.work")
+    assert otar.action == "call_tool"
+    assert otar.observation == ""
+    assert otar.result == ""
+
+
+def test_otar_parser_events_beat_attributes():
+    events = [{"name": "gen_ai.prompt", "attributes": {"content": "from event"}}]
+    otar = OTARParser.parse({"gen_ai.request.prompt": "from attr"}, events=events)
+    assert otar.observation == "from event"
 
 
 def test_causal_graph_add_step():
