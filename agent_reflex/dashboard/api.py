@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 import json
+import time
+from collections import defaultdict
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Request
 from pydantic import BaseModel
 
+from agent_reflex.api.auth import api_key_auth
 from agent_reflex.attribution.engine import AttributionEngine
 from agent_reflex.common.types import RecoveryOutcome
 from agent_reflex.graph.models import CausalGraph
@@ -52,6 +55,22 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
 
 app = FastAPI(title="AgentReflex", version="0.1.0", lifespan=lifespan)
 
+# Per-key sliding-window rate limit (in-process; a multi-worker deployment
+# should back this with Redis — noted in README).
+_MAX_WRITES_PER_MINUTE = 60
+_rate_windows: dict[str, list[float]] = defaultdict(list)
+
+
+async def _rate_limit_write(request: Request) -> None:
+    """Rate limit keyed by the authenticated API key (set by the auth dep)."""
+    key_id = str(getattr(request.state, "api_key_id", "unauthenticated"))
+    now = time.monotonic()
+    recent = [t for t in _rate_windows[key_id] if now - t < 60.0]
+    if len(recent) >= _MAX_WRITES_PER_MINUTE:
+        raise HTTPException(status_code=429, detail="rate limit exceeded")
+    recent.append(now)
+    _rate_windows[key_id] = recent
+
 
 @app.get("/health")
 async def health() -> dict[str, str]:
@@ -80,7 +99,10 @@ async def ready() -> dict[str, Any]:
     return {"status": "ready", "db": "connected", "llm_configured": has_llm}
 
 
-@app.post("/v1/traces")
+@app.post(
+    "/v1/traces",
+    dependencies=[Depends(api_key_auth.require("write")), Depends(_rate_limit_write)],
+)
 async def otlp_receive(request: Request) -> dict[str, Any]:
     """OTLP/HTTP receiver (ExportTraceServiceRequest).
 
@@ -156,7 +178,10 @@ class TopologyInput(BaseModel):
     shared_contexts: int = 0
 
 
-@app.post("/traces")
+@app.post(
+    "/traces",
+    dependencies=[Depends(api_key_auth.require("write")), Depends(_rate_limit_write)],
+)
 async def ingest_trace(input_data: TraceInput) -> dict[str, Any]:
     graph = CausalGraph.from_json(input_data.graph_json)
     if _attribution_engine is None:
@@ -188,27 +213,27 @@ async def ingest_trace(input_data: TraceInput) -> dict[str, Any]:
     }
 
 
-@app.get("/traces/{session_id}/attribution")
+@app.get("/traces/{session_id}/attribution", dependencies=[Depends(api_key_auth.require("read"))])
 async def get_attribution(session_id: str) -> dict[str, Any]:
     return {"session_id": session_id, "status": "pending"}
 
 
-@app.get("/traces/{session_id}/graph")
+@app.get("/traces/{session_id}/graph", dependencies=[Depends(api_key_auth.require("read"))])
 async def get_graph(session_id: str) -> dict[str, Any]:
     return {"session_id": session_id, "graph": {}}
 
 
-@app.get("/agents/{agent_id}/reliability")
+@app.get("/agents/{agent_id}/reliability", dependencies=[Depends(api_key_auth.require("read"))])
 async def get_reliability(agent_id: str) -> dict[str, Any]:
     return _reliability_scorer.current_score_with_trend(agent_id)
 
 
-@app.get("/agents/{agent_id}/reliability/trend/{playbook_name}")
+@app.get("/agents/{agent_id}/reliability/trend/{playbook_name}", dependencies=[Depends(api_key_auth.require("read"))])
 async def get_reliability_trend(agent_id: str, playbook_name: str) -> dict[str, Any]:
     return _reliability_scorer.reliability_trend(agent_id, playbook_name)
 
 
-@app.get("/recovery/stats")
+@app.get("/recovery/stats", dependencies=[Depends(api_key_auth.require("read"))])
 async def get_recovery_stats() -> dict[str, Any]:
     if not _recovery_log:
         return {"adaptive_success_rate": 0.0, "static_success_rate": 0.0, "total_trials": 0}
@@ -228,7 +253,7 @@ async def get_recovery_stats() -> dict[str, Any]:
     }
 
 
-@app.post("/consistency/score")
+@app.post("/consistency/score", dependencies=[Depends(api_key_auth.require("write")), Depends(_rate_limit_write)])
 async def score_consistency(input_data: ConsistencyInput) -> dict[str, Any]:
     should_escalate, score = _escalation_controller.should_escalate(
         prompt=input_data.prompt,
@@ -241,7 +266,7 @@ async def score_consistency(input_data: ConsistencyInput) -> dict[str, Any]:
     }
 
 
-@app.post("/recovery/feedback")
+@app.post("/recovery/feedback", dependencies=[Depends(api_key_auth.require("write")), Depends(_rate_limit_write)])
 async def recovery_feedback(feedback: RecoveryFeedback) -> dict[str, str]:
     outcome = RecoveryOutcome(
         session_id=feedback.session_id,
@@ -275,21 +300,21 @@ async def recovery_feedback(feedback: RecoveryFeedback) -> dict[str, str]:
     return {"status": "recorded"}
 
 
-@app.get("/stats/heatmap")
+@app.get("/stats/heatmap", dependencies=[Depends(api_key_auth.require("read"))])
 async def stats_heatmap() -> list[dict[str, Any]]:
     if _db is None:
         return []
     return _db.get_heatmap()
 
 
-@app.get("/stats/recovery-breakdown")
+@app.get("/stats/recovery-breakdown", dependencies=[Depends(api_key_auth.require("read"))])
 async def stats_recovery_breakdown() -> list[dict[str, Any]]:
     if _db is None:
         return []
     return _db.get_recovery_breakdown()
 
 
-@app.post("/predictive/score")
+@app.post("/predictive/score", dependencies=[Depends(api_key_auth.require("write")), Depends(_rate_limit_write)])
 async def predict_topology(topology: TopologyInput) -> dict[str, Any]:
     from agent_reflex.predictive.topology_scorer import PredictiveTopologyScorer
     scorer = PredictiveTopologyScorer()
@@ -297,6 +322,6 @@ async def predict_topology(topology: TopologyInput) -> dict[str, Any]:
     return {"risk_scores": scores}
 
 
-@app.get("/predictive/score")
+@app.get("/predictive/score", dependencies=[Depends(api_key_auth.require("read"))])
 async def predict_topology_get() -> dict[str, Any]:
     return {"message": "Send topology via POST /predictive/score with JSON body"}

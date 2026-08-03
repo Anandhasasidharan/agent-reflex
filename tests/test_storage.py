@@ -64,7 +64,7 @@ def test_dashboard_stats_heatmap_endpoint():
 
     from agent_reflex.dashboard.api import app
     client = TestClient(app)
-    response = client.get("/stats/heatmap")
+    response = client.get("/stats/heatmap", headers={"x-api-key": "test-key"})
     assert response.status_code == 200
     assert isinstance(response.json(), list)
 
@@ -74,6 +74,6 @@ def test_dashboard_stats_recovery_breakdown_endpoint():
 
     from agent_reflex.dashboard.api import app
     client = TestClient(app)
-    response = client.get("/stats/recovery-breakdown")
+    response = client.get("/stats/recovery-breakdown", headers={"x-api-key": "test-key"})
     assert response.status_code == 200
     assert isinstance(response.json(), list)

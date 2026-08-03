@@ -68,6 +68,8 @@ services:
   otel-collector:
     image: otel/opentelemetry-collector:0.157.0
     command: ["--config", "/etc/otelcol/config.yml"]
+    environment:
+      AGENT_REFLEX_API_KEY: ${AGENT_REFLEX_API_KEY:-}
     volumes:
       - ./deploy/otel-collector-config.yml:/etc/otelcol/config.yml:ro
     ports:

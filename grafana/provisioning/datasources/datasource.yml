@@ -6,3 +6,7 @@ datasources:
     access: proxy
     url: http://app:8000
     isDefault: true
+    jsonData:
+      httpHeaderName1: X-API-Key
+    secureJsonData:
+      httpHeaderValue1: ${AGENT_REFLEX_API_KEY}

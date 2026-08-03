@@ -26,6 +26,8 @@ exporters:
       initial_interval: 5s
       max_interval: 30s
       max_elapsed_time: 120s
+    headers:
+      x-api-key: ${env:AGENT_REFLEX_API_KEY}
 
 service:
   extensions: [health_check]
