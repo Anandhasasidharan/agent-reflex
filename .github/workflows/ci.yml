@@ -195,5 +195,7 @@ jobs:
           severity: HIGH,CRITICAL
           exit-code: "1"
           # Known-safe binary (advisory's recommended version); released
-          # before the March 2026 compromise window.
-          version: 0.69.3
+          # before the March 2026 compromise window. The post-incident
+          # install.sh resolves /releases/<version> verbatim, so the `v`
+          # prefix is required (without it the lookup 404s).
+          version: v0.69.3
