@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any, cast
 
 from sqlalchemy import create_engine, func, text
@@ -121,7 +121,7 @@ class PostgresRepository:
             db.commit()
 
     def get_heatmap(self, days: int = 30) -> list[dict[str, Any]]:
-        cutoff = datetime.now(UTC)
+        cutoff = datetime.now(UTC) - timedelta(days=days)
         with self._session() as db:
             results = (
                 db.query(
