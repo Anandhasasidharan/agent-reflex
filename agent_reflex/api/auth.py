@@ -124,8 +124,10 @@ api_key_auth = ApiKeyAuth()
 # ---------------------------------------------------------------------------
 
 def _connect() -> Any:
+    from agent_reflex.common.config import Settings
     from agent_reflex.storage.repository import PostgresRepository
 
+    Settings().validate_production()
     repository = PostgresRepository()
     repository.init_db()
     return repository

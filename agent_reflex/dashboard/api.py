@@ -43,6 +43,10 @@ def _task_context_for(graph: CausalGraph) -> str:
 
 @asynccontextmanager
 async def lifespan(application: FastAPI) -> AsyncIterator[None]:
+    from agent_reflex.common.config import Settings
+
+    settings = Settings()
+    settings.validate_production()
     global _attribution_engine, _db
     _attribution_engine = AttributionEngine()
     try:
