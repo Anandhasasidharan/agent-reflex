@@ -14,5 +14,4 @@ mynotes.docx
 .env
 data/
 tests/
-eval_results/
 demo/causal_graph_viewer.html
