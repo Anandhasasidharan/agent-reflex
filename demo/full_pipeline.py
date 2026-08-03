@@ -16,7 +16,6 @@ Usage:
 
 from __future__ import annotations
 
-import json
 import os
 import sys
 
@@ -30,7 +29,6 @@ from agent_reflex.common.types import (
     RecoveryOutcome,
     StepOTAR,
 )
-from agent_reflex.dashboard.causal_viewer import HTML_VIEWER_TEMPLATE, build_viewer_data
 from agent_reflex.graph.models import CausalGraph
 from agent_reflex.recovery.bandit import ContextualBanditSelector
 from agent_reflex.recovery.playbooks import PlaybookLibrary, StaticRecoverySelector
@@ -248,14 +246,6 @@ def main() -> None:
     print(f"  Reliability score:  {profile['score']:.4f} ({profile['trend_pct']:+.2f}% trend)")
     print(f"  Escalation trigger: {'ACTIVE' if escalate else 'nominal'}")
     print("=" * 72)
-
-    # Generate HTML viewer
-    viewer_data = build_viewer_data(graph, cause_node_id=result.cause_node_id)
-    html = HTML_VIEWER_TEMPLATE.replace("{graph_json}", json.dumps(viewer_data))
-    viewer_path = os.path.join(os.path.dirname(__file__), "causal_graph_viewer.html")
-    with open(viewer_path, "w") as f:
-        f.write(html)
-    print(f"\nCausal graph viewer saved to: {viewer_path}")
 
 
 if __name__ == "__main__":

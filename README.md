@@ -171,8 +171,37 @@ AgentReflex talks to **any OpenAI-compatible API** through a thin `LLMClient` wr
   `AGENT_REFLEX_LLM_EMBEDDING_BASE_URL` to a provider that has one, otherwise
   consistency scoring falls back to lexical agreement (token-sequence similarity).
 
-## Demo
+## Web UI
 
+`frontend/` is a React + Vite + TypeScript app that talks to the FastAPI
+backend on `http://localhost:8000` (override with `VITE_API_BASE`). It ships
+in SRE and investigation modes:
+
+- `/overview` — fleet table with per-agent reliability health + trend,
+  failure-type heatmap, recovery bandit stats, and the oracle-vs-naive-baseline
+  eval comparison side by side (both numbers are shown; honesty is the point).
+- `/sessions` — browsable, filterable session list.
+- `/sessions/:id` — react-flow causal graph with the root-cause node
+  highlighted, OTAR step detail on node click, session attribution (gracefully
+  handling null attribution when the LLM failed at ingest), and recovery
+  feedback submission that prompts for a write-scoped key.
+
+Keys live in `sessionStorage` (never `localStorage`); a 401 bounces to the
+settings screen. Frontend types are mirrored from the checked-in OpenAPI
+snapshot and a drift test fails CI if the backend schema changes without
+updating both.
+
+```bash
+cd frontend
+npm install
+npm run dev          # http://localhost:5173 (CORS allows :5173 and :8080)
+```
+
+For Docker deployments the `frontend` compose service builds the image
+(multi-stage node → nginx with SPA fallback) and serves it on
+`http://localhost:8080`.
+
+## Demo
 The full pipeline demo (`demo/full_pipeline.py`) runs a simulated multi-agent failure through all 7 stages:
 
 1. **Causal graph reconstruction** — Builds a 5-node, 2-subtask graph from simulated OTel spans
@@ -183,7 +212,9 @@ The full pipeline demo (`demo/full_pipeline.py`) runs a simulated multi-agent fa
 6. **Escalation trigger** — Consistency-sampling (N=5) on test prompts, threshold-based escalation
 7. **Reliability scoring** — Exponential weighted moving average with before/after playbook trend analysis
 
-Output also includes an interactive D3.js causal graph viewer (`demo/causal_graph_viewer.html`) with root-cause node highlighted in red.
+For an interactive view of a real causal graph with root-cause highlighting, open the web UI
+(`frontend/`, see [Web UI](#web-ui)) instead — the standalone D3.js viewer was removed once the
+React flow graph replaced it.
 
 ## Project Structure
 
@@ -199,11 +230,12 @@ agent_reflex/
 ├── reliability/         # Quantitative reliability scorer (weighted EWMA, trends)
 ├── predictive/          # Topology-based risk scoring (stretch, experimental)
 ├── storage/             # Postgres models (SQLAlchemy) + repository pattern
-├── dashboard/           # FastAPI (9 endpoints) + D3.js causal graph viewer
+├── dashboard/           # FastAPI (9 endpoints) + causal graph viewer data
 ├── eval/                # Synthetic scenarios + Who&When/TraceElephant adapters + redaction ablation
-├── demo/                # Full pipeline demo + HTML graph viewer
+├── demo/                # Full pipeline demo + reference agent (OTLP emitter)
+├── frontend/            # React + Vite + TypeScript web UI (see below)
 ├── grafana/             # Auto-provisioned Grafana 6-panel dashboard
-├── tests/               # 165 tests (pytest, pytest-cov, all passing)
+├── tests/               # 205 tests (pytest, pytest-cov, all passing)
 └── .github/workflows/   # CI: ruff → mypy → pytest (3.11 + 3.12); CD: GHCR image
 ```
 
