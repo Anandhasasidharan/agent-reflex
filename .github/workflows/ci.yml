@@ -160,9 +160,15 @@ jobs:
           pip install pip-audit
           pip-audit --fail-on high
       - name: Trivy filesystem scan
-        uses: aquasecurity/trivy-action@0.28.0
+        # Pinned to the SHA of the 0.35.0 tag — the first known-safe release
+        # after the March 2026 trivy-action supply-chain compromise (tags
+        # 0.0.1–0.34.2 contained a credential stealer).
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1
         with:
           scan-type: fs
           scan-ref: .
           severity: HIGH,CRITICAL
           exit-code: "1"
+          # Known-safe binary (advisory's recommended version); released
+          # before the March 2026 compromise window.
+          version: 0.69.3
