@@ -1,5 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes, useNavigate } from "react-router";
-import type { ReactNode } from "react";
+import { useCallback, type ReactNode } from "react";
 import { AuthProvider, useAuth } from "./lib/auth";
 import { Layout } from "./components/Layout";
 import { SettingsPage } from "./pages/SettingsPage";
@@ -20,14 +20,17 @@ function RequireAuth({ children }: { children: ReactNode }) {
 export function useAuthRedirect() {
   const { notifyAuthError } = useAuth();
   const navigate = useNavigate();
-  return (err: unknown) => {
-    if (err instanceof AuthError) {
-      notifyAuthError(err.message);
-      navigate("/settings");
-      return true;
-    }
-    return false;
-  };
+  return useCallback(
+    (err: unknown) => {
+      if (err instanceof AuthError) {
+        notifyAuthError(err.message);
+        navigate("/settings");
+        return true;
+      }
+      return false;
+    },
+    [notifyAuthError, navigate],
+  );
 }
 
 export default function App() {
