@@ -22,6 +22,7 @@ class SessionRecord(Base):
     failure_type = Column(String(100), nullable=True)
     cause_node_id = Column(String(255), nullable=True)
     causal_responsibility_score = Column(Float, default=0.0)
+    evidence_json = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     steps = relationship("TraceStepRecord", back_populates="session", cascade="all, delete-orphan")

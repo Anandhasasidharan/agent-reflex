@@ -38,6 +38,11 @@ class Settings(BaseSettings):
     consistency_temperature: float = 0.3
     bandit_epsilon: float = 0.3
     bandit_epsilon_decay: float = 0.99
+    reliability_health_degraded: float = 0.7
+    reliability_health_critical: float = 0.4
+    agents_status_window: int = 10
+    eval_results_dir: str = "eval_results"
+    cors_origins: str = "http://localhost:5173,http://localhost:8080"
 
     @property
     def is_production(self) -> bool:

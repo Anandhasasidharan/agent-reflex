@@ -85,12 +85,17 @@ def emit_step(
 
 
 def main() -> int:
+    scenario = os.environ.get("REFERENCE_SCENARIO", "timeout")
+    if scenario not in ("timeout", "success"):
+        print(f"unknown REFERENCE_SCENARIO {scenario!r} (use 'timeout' or 'success')", file=sys.stderr)
+        return 2
+
     tracer = setup_tracer()
     session_ctx = trace.set_span_in_context(tracer.start_span("agent.session"))
 
-    print(f"reference-agent: emitting trace to {OTEL_ENDPOINT} (model={LLM_MODEL})", flush=True)
+    print(f"reference-agent: emitting {scenario} trace to {OTEL_ENDPOINT} (model={LLM_MODEL})", flush=True)
 
-    # Step 1: planner drafts the plan (succeeds).
+    # Step 1: planner drafts the plan (succeeds in both scenarios).
     emit_step(
         tracer,
         name="planner_draft",
@@ -103,23 +108,44 @@ def main() -> int:
         parent_ctx=session_ctx,
     )
 
-    # Step 2: researcher fetches a required input — deliberately fails
-    # (simulates an infra timeout). The trace must mark this step ERROR.
-    emit_step(
-        tracer,
-        name="researcher_fetch",
-        agent_id="researcher",
-        subtask_id="task_1",
-        operation="call_tool",
-        observation="Fetch the release checklist from the ops store.",
-        result="",
-        thought="Querying the ops store for the release checklist.",
-        error="tool timeout after 30s: ops store unreachable",
-        parent_ctx=session_ctx,
-    )
+    if scenario == "timeout":
+        # Step 2: researcher fetches a required input — deliberately fails
+        # (simulates an infra timeout). The trace must mark this step ERROR.
+        emit_step(
+            tracer,
+            name="researcher_fetch",
+            agent_id="researcher",
+            subtask_id="task_1",
+            operation="call_tool",
+            observation="Fetch the release checklist from the ops store.",
+            result="",
+            thought="Querying the ops store for the release checklist.",
+            error="tool timeout after 30s: ops store unreachable",
+            parent_ctx=session_ctx,
+        )
+    else:
+        # Step 2 (success scenario): the checklist fetch succeeds.
+        emit_step(
+            tracer,
+            name="researcher_fetch",
+            agent_id="researcher",
+            subtask_id="task_1",
+            operation="call_tool",
+            observation="Fetch the release checklist from the ops store.",
+            result="checklist retrieved: scope frozen, deploys gated on sign-off",
+            thought="Querying the ops store for the release checklist.",
+            parent_ctx=session_ctx,
+        )
 
-    # Step 3: verifier rejects the plan because the checklist fetch failed —
-    # the final error that surfaces to the user.
+    # Step 3: verifier rejects the plan when the checklist fetch failed —
+    # the final error that surfaces to the user. In the success scenario the
+    # verification passes.
+    verifier_error = None if scenario == "success" else "verification failed: missing release checklist"
+    verifier_result = (
+        "Plan APPROVED: scope frozen and checklist complete."
+        if scenario == "success"
+        else "Plan REJECTED: cannot proceed without the release checklist."
+    )
     emit_step(
         tracer,
         name="verifier_check",
@@ -127,9 +153,10 @@ def main() -> int:
         subtask_id="task_2",
         operation="chat",
         observation="Verify the plan against the release checklist.",
-        result="Plan REJECTED: cannot proceed without the release checklist.",
-        thought="The checklist fetch failed, so the plan cannot be verified.",
-        error="verification failed: missing release checklist",
+        result=verifier_result,
+        thought="The checklist fetch failed, so the plan cannot be verified."
+        if scenario == "timeout" else "The plan is complete and can be verified.",
+        error=verifier_error,
         parent_ctx=session_ctx,
     )
 
@@ -137,8 +164,7 @@ def main() -> int:
     trace.get_tracer_provider().force_flush()  # type: ignore[attr-defined]
     time.sleep(1.0)
 
-    print("reference-agent: emitted 3 spans (1 error-flagged). Session =", flush=True)
-    print("  trace_id visible in Postgres sessions.cause_node_id after ingestion", flush=True)
+    print("reference-agent: emitted 3 spans.", flush=True)
     return 0
 
 

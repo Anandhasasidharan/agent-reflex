@@ -1,0 +1,802 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "AgentReflex",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Health",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ready": {
+      "get": {
+        "summary": "Ready",
+        "description": "Readiness: the service can actually serve (DB reachable).",
+        "operationId": "ready_ready_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Ready Ready Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/traces": {
+      "post": {
+        "summary": "Otlp Receive",
+        "description": "OTLP/HTTP receiver (ExportTraceServiceRequest).\n\nParses real OTel spans forwarded by a collector \u2014 protobuf (the actual\nOTLP wire format) or JSON \u2014 reconstructs one CausalGraph per trace, runs\nreal attribution, and persists to Postgres.",
+        "operationId": "otlp_receive_v1_traces_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Otlp Receive V1 Traces Post"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/traces": {
+      "post": {
+        "summary": "Ingest Trace",
+        "operationId": "ingest_trace_traces_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TraceInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Ingest Trace Traces Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "List Traces",
+        "description": "Paginated session list, newest first. `since`/`until` are ISO-8601\ndatetimes. When Postgres is unavailable the API degrades to in-memory\nmode: the list is empty rather than an error.",
+        "operationId": "list_traces_traces_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "agent_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Agent Id"
+            }
+          },
+          {
+            "name": "failure_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Failure Type"
+            }
+          },
+          {
+            "name": "since",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Since"
+            }
+          },
+          {
+            "name": "until",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Until"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response List Traces Traces Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/traces/{session_id}/attribution": {
+      "get": {
+        "summary": "Get Attribution",
+        "description": "Real stored AttributionResult in the same shape POST /traces returns\nat ingest. `attribution` is null when LLM attribution failed at ingest\ntime (best-effort ingestion path) \u2014 not an error.",
+        "operationId": "get_attribution_traces__session_id__attribution_get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Get Attribution Traces  Session Id  Attribution Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/traces/{session_id}/graph": {
+      "get": {
+        "summary": "Get Graph",
+        "description": "Stored CausalGraph in the {nodes, edges} viewer shape (see\ndashboard/causal_viewer.py \u2014 the same conversion the standalone HTML\nviewer used, now served by the API itself).",
+        "operationId": "get_graph_traces__session_id__graph_get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Get Graph Traces  Session Id  Graph Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agents/status": {
+      "get": {
+        "summary": "Agents Status",
+        "description": "Per-agent fleet health: current reliability score (exponentially\nweighted over the configurable window), trend direction, and a\nthreshold-based health flag. Thresholds and window come from\nSettings (AGENT_REFLEX_RELIABILITY_HEALTH_*, AGENT_REFLEX_AGENTS_STATUS_WINDOW).",
+        "operationId": "agents_status_agents_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "type": "object"
+                  },
+                  "type": "array",
+                  "title": "Response Agents Status Agents Status Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/eval/results": {
+      "get": {
+        "summary": "Eval Results",
+        "description": "Latest comparison-run summary (oracle-guided vs naive baseline),\nread from the real eval_results/comparison_run_*.json file. The\noverview surfaces both numbers side by side \u2014 never one cherry-picked\nmetric.",
+        "operationId": "eval_results_eval_results_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Eval Results Eval Results Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agents/{agent_id}/reliability": {
+      "get": {
+        "summary": "Get Reliability",
+        "operationId": "get_reliability_agents__agent_id__reliability_get",
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Agent Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Get Reliability Agents  Agent Id  Reliability Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agents/{agent_id}/reliability/trend/{playbook_name}": {
+      "get": {
+        "summary": "Get Reliability Trend",
+        "operationId": "get_reliability_trend_agents__agent_id__reliability_trend__playbook_name__get",
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Agent Id"
+            }
+          },
+          {
+            "name": "playbook_name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Playbook Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Get Reliability Trend Agents  Agent Id  Reliability Trend  Playbook Name  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/recovery/stats": {
+      "get": {
+        "summary": "Get Recovery Stats",
+        "operationId": "get_recovery_stats_recovery_stats_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Get Recovery Stats Recovery Stats Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/consistency/score": {
+      "post": {
+        "summary": "Score Consistency",
+        "operationId": "score_consistency_consistency_score_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConsistencyInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Score Consistency Consistency Score Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/recovery/feedback": {
+      "post": {
+        "summary": "Recovery Feedback",
+        "operationId": "recovery_feedback_recovery_feedback_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecoveryFeedback"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Recovery Feedback Recovery Feedback Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/stats/heatmap": {
+      "get": {
+        "summary": "Stats Heatmap",
+        "operationId": "stats_heatmap_stats_heatmap_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "type": "object"
+                  },
+                  "type": "array",
+                  "title": "Response Stats Heatmap Stats Heatmap Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/stats/recovery-breakdown": {
+      "get": {
+        "summary": "Stats Recovery Breakdown",
+        "operationId": "stats_recovery_breakdown_stats_recovery_breakdown_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "type": "object"
+                  },
+                  "type": "array",
+                  "title": "Response Stats Recovery Breakdown Stats Recovery Breakdown Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/predictive/score": {
+      "get": {
+        "summary": "Predict Topology Get",
+        "operationId": "predict_topology_get_predictive_score_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Predict Topology Get Predictive Score Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Predict Topology",
+        "operationId": "predict_topology_predictive_score_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TopologyInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Predict Topology Predictive Score Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ConsistencyInput": {
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "title": "Prompt"
+          },
+          "is_critical": {
+            "type": "boolean",
+            "title": "Is Critical",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "prompt"
+        ],
+        "title": "ConsistencyInput"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "RecoveryFeedback": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "agent_id": {
+            "type": "string",
+            "title": "Agent Id",
+            "default": "default_agent"
+          },
+          "task_description": {
+            "type": "string",
+            "title": "Task Description",
+            "default": ""
+          },
+          "playbook_name": {
+            "type": "string",
+            "title": "Playbook Name"
+          },
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "partial": {
+            "type": "boolean",
+            "title": "Partial",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "playbook_name",
+          "success"
+        ],
+        "title": "RecoveryFeedback"
+      },
+      "TopologyInput": {
+        "properties": {
+          "agents": {
+            "items": {
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Agents",
+            "default": []
+          },
+          "edges": {
+            "items": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Edges",
+            "default": []
+          },
+          "shared_contexts": {
+            "type": "integer",
+            "title": "Shared Contexts",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "TopologyInput"
+      },
+      "TraceInput": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "graph_json": {
+            "type": "string",
+            "title": "Graph Json"
+          },
+          "task_context": {
+            "type": "string",
+            "title": "Task Context",
+            "default": ""
+          },
+          "agent_id": {
+            "type": "string",
+            "title": "Agent Id",
+            "default": "default_agent"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "graph_json"
+        ],
+        "title": "TraceInput"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

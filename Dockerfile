@@ -26,6 +26,7 @@ ENV PATH="/opt/venv/bin:$PATH"
 
 WORKDIR /app
 COPY deploy/logging-config.json /app/logging-config.json
+COPY eval_results /app/eval_results
 
 USER appuser
 

@@ -9,10 +9,12 @@ from contextlib import asynccontextmanager
 from typing import Any
 
 from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from agent_reflex.api.auth import api_key_auth
 from agent_reflex.attribution.engine import AttributionEngine
+from agent_reflex.common.config import Settings
 from agent_reflex.common.types import RecoveryOutcome
 from agent_reflex.graph.models import CausalGraph
 from agent_reflex.recovery.bandit import ContextualBanditSelector
@@ -44,6 +46,17 @@ def _task_context_for(graph: CausalGraph) -> str:
     return (observation or nodes[0].otar.thought or "")[:1000]
 
 
+def _record_reliability_at_ingest(agent_id: str, session_id: str, graph: CausalGraph) -> None:
+    """Persist a reliability score derived from the trace's own error flags
+    (any error-flagged step => failed session, else success). This is what
+    /agents/status aggregates; without it the per-agent numbers would be
+    empty for every ingested session."""
+    if _db is None:
+        return
+    failed = any(n.error_flag for n in graph.get_all_nodes())
+    _db.save_reliability_score(agent_id, session_id, 0.0 if failed else 1.0)
+
+
 @asynccontextmanager
 async def lifespan(application: FastAPI) -> AsyncIterator[None]:
     from agent_reflex.common.config import Settings
@@ -61,6 +74,15 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(title="AgentReflex", version="0.1.0", lifespan=lifespan)
+
+_settings = Settings()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[o.strip() for o in _settings.cors_origins.split(",") if o.strip()],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Per-key sliding-window rate limit (in-process; a multi-worker deployment
 # should back this with Redis — noted in README).
@@ -163,6 +185,7 @@ async def otlp_receive(request: Request) -> dict[str, Any]:
                 graph=graph,
                 attribution=result,
             )
+        _record_reliability_at_ingest("otlp_receiver", trace_id, graph)
         ingested += 1
 
     return {"partialSuccess": {"rejectedSpans": 0, "errorMessage": ""}, "ingested_traces": ingested}
@@ -218,6 +241,7 @@ async def ingest_trace(input_data: TraceInput) -> dict[str, Any]:
             graph=graph,
             attribution=result,
         )
+    _record_reliability_at_ingest(input_data.agent_id, input_data.session_id, graph)
 
     return {
         "session_id": input_data.session_id,
@@ -230,14 +254,166 @@ async def ingest_trace(input_data: TraceInput) -> dict[str, Any]:
     }
 
 
+@app.get("/traces", dependencies=[Depends(api_key_auth.require("read"))])
+async def list_traces(
+    limit: int = 50,
+    offset: int = 0,
+    agent_id: str | None = None,
+    failure_type: str | None = None,
+    since: str | None = None,
+    until: str | None = None,
+) -> dict[str, Any]:
+    """Paginated session list, newest first. `since`/`until` are ISO-8601
+    datetimes. When Postgres is unavailable the API degrades to in-memory
+    mode: the list is empty rather than an error."""
+    from datetime import UTC, datetime
+
+    if _db is None:
+        return {"items": [], "total": 0, "limit": limit, "offset": offset}
+
+    def _parse_dt(raw: str | None) -> datetime | None:
+        if not raw:
+            return None
+        try:
+            dt = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+        except ValueError:
+            raise HTTPException(status_code=422, detail=f"invalid datetime: {raw!r}")
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=UTC)
+        return dt
+
+    limit = max(1, min(limit, 200))
+    offset = max(0, offset)
+    items, total = _db.list_sessions(
+        limit=limit,
+        offset=offset,
+        agent_id=agent_id,
+        failure_type=failure_type,
+        since=_parse_dt(since),
+        until=_parse_dt(until),
+    )
+    return {"items": items, "total": total, "limit": limit, "offset": offset}
+
+
 @app.get("/traces/{session_id}/attribution", dependencies=[Depends(api_key_auth.require("read"))])
 async def get_attribution(session_id: str) -> dict[str, Any]:
-    return {"session_id": session_id, "status": "pending"}
+    """Real stored AttributionResult in the same shape POST /traces returns
+    at ingest. `attribution` is null when LLM attribution failed at ingest
+    time (best-effort ingestion path) — not an error."""
+    if _db is None:
+        raise HTTPException(status_code=404, detail=f"session {session_id} not found")
+    session = _db.get_session(session_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail=f"session {session_id} not found")
+
+    attribution: dict[str, Any] | None = None
+    if session.get("failure_type") is not None:
+        attribution = {
+            "failure_type": session["failure_type"],
+            "cause_node_id": session.get("cause_node_id"),
+            "crs": session.get("causal_responsibility_score"),
+            "evidence": session.get("evidence", []),
+        }
+    return {"session_id": session_id, "attribution": attribution}
 
 
 @app.get("/traces/{session_id}/graph", dependencies=[Depends(api_key_auth.require("read"))])
 async def get_graph(session_id: str) -> dict[str, Any]:
-    return {"session_id": session_id, "graph": {}}
+    """Stored CausalGraph in the {nodes, edges} viewer shape (see
+    dashboard/causal_viewer.py — the same conversion the standalone HTML
+    viewer used, now served by the API itself)."""
+    from agent_reflex.dashboard.causal_viewer import build_viewer_data
+
+    if _db is None:
+        raise HTTPException(status_code=404, detail=f"session {session_id} not found")
+    graph = _db.get_graph(session_id)
+    if graph is None:
+        raise HTTPException(status_code=404, detail=f"session {session_id} not found")
+    session = _db.get_session(session_id)
+    viewer = build_viewer_data(graph, cause_node_id=session.get("cause_node_id") if session else None)
+    return {"session_id": session_id, **viewer}
+
+
+@app.get("/agents/status", dependencies=[Depends(api_key_auth.require("read"))])
+async def agents_status() -> list[dict[str, Any]]:
+    """Per-agent fleet health: current reliability score (exponentially
+    weighted over the configurable window), trend direction, and a
+    threshold-based health flag. Thresholds and window come from
+    Settings (AGENT_REFLEX_RELIABILITY_HEALTH_*, AGENT_REFLEX_AGENTS_STATUS_WINDOW)."""
+    import numpy as np
+
+    settings = Settings()
+    if _db is None:
+        return []
+    summary = _db.get_agent_reliability_summary(window=settings.agents_status_window)
+
+    result: list[dict[str, Any]] = []
+    for agent_id, data in sorted(summary.items()):
+        scores = data["scores"]
+        if not scores:
+            result.append({
+                "agent_id": agent_id,
+                "score": None,
+                "n_sessions": data["n_sessions"],
+                "trend": "flat",
+                "health": "unknown",
+                "history": [],
+            })
+            continue
+
+        arr = np.array(scores, dtype=float)
+        weights = np.exp(np.linspace(0, 2, len(arr)))
+        weights /= weights.sum()
+        score = float(np.sum(arr * weights))
+
+        mid = len(arr) // 2
+        first_half = float(np.mean(arr[:mid])) if mid > 0 else 0.0
+        second_half = float(np.mean(arr[mid:])) if mid > 0 else 0.0
+        # A zero baseline makes the % meaningless; report direction only.
+        trend_pct = (second_half - first_half) / first_half * 100 if first_half > 0.01 else 0.0
+        trend = "up" if second_half - first_half > 0.01 else ("down" if second_half - first_half < -0.01 else "flat")
+
+        if score >= settings.reliability_health_degraded:
+            health = "healthy"
+        elif score >= settings.reliability_health_critical:
+            health = "degraded"
+        else:
+            health = "critical"
+
+        result.append({
+            "agent_id": agent_id,
+            "score": round(score, 4),
+            "n_sessions": data["n_sessions"],
+            "trend": trend,
+            "trend_pct": round(trend_pct, 2),
+            "health": health,
+            "history": [round(s, 4) for s in scores],
+        })
+    return result
+
+
+@app.get("/eval/results", dependencies=[Depends(api_key_auth.require("read"))])
+async def eval_results() -> dict[str, Any]:
+    """Latest comparison-run summary (oracle-guided vs naive baseline),
+    read from the real eval_results/comparison_run_*.json file. The
+    overview surfaces both numbers side by side — never one cherry-picked
+    metric."""
+    import glob
+    import os
+
+    settings = Settings()
+    matches = sorted(glob.glob(os.path.join(settings.eval_results_dir, "comparison_run_*.json")))
+    if not matches:
+        return {"available": False, "message": "no comparison_run_*.json found in eval_results/"}
+    with open(matches[-1]) as f:
+        raw = json.load(f)
+    return {
+        "available": True,
+        "file": os.path.basename(matches[-1]),
+        "total_scenarios": raw.get("total_scenarios"),
+        "oracle": raw.get("oracle_method", {}),
+        "naive_baseline": raw.get("naive_baseline", {}),
+    }
 
 
 @app.get("/agents/{agent_id}/reliability", dependencies=[Depends(api_key_auth.require("read"))])

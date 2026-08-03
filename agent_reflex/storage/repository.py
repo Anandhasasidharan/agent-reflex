@@ -1,15 +1,18 @@
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 
-from sqlalchemy import create_engine, func
+from sqlalchemy import create_engine, func, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from agent_reflex.common.config import Settings
 from agent_reflex.common.types import (
     AttributionResult,
+    CausalGraphNode,
     RecoveryOutcome,
+    StepOTAR,
 )
 from agent_reflex.graph.models import CausalGraph
 
@@ -31,6 +34,14 @@ class PostgresRepository:
 
     def init_db(self) -> None:
         Base.metadata.create_all(self._engine)
+        # Idempotent migrations for tables created by an older schema
+        # (create_all never alters existing tables).
+        try:
+            with self._session() as db:
+                db.execute(text("ALTER TABLE sessions ADD COLUMN IF NOT EXISTS evidence_json TEXT"))
+                db.commit()
+        except Exception:
+            pass
 
     def _session(self) -> Session:
         return self._SessionLocal()
@@ -57,6 +68,7 @@ class PostgresRepository:
                 failure_type=attribution.failure_type.value if attribution else None,
                 cause_node_id=attribution.cause_node_id if attribution else None,
                 causal_responsibility_score=attribution.causal_responsibility_score if attribution else 0.0,
+                evidence_json=json.dumps(attribution.evidence) if attribution else None,
             )
             db.add(session)
 
@@ -179,3 +191,134 @@ class PostgresRepository:
                 .all()
             )
             return {r[0]: int(r[1]) for r in results}
+
+    # ------------------------------------------------------------------
+    # Session browsing (dashboard / frontend)
+    # ------------------------------------------------------------------
+
+    def get_session(self, session_id: str) -> dict[str, Any] | None:
+        """One session summary (including persisted attribution fields).
+
+        Returns None when the session does not exist. Attribution fields are
+        null when LLM attribution failed at ingest time (best-effort path).
+        """
+        with self._session() as db:
+            record = db.query(SessionRecord).filter_by(session_id=session_id).first()
+            if record is None:
+                return None
+            return self._session_summary(record)
+
+    @staticmethod
+    def _session_summary(record: SessionRecord) -> dict[str, Any]:
+        evidence: list[str] = []
+        if record.evidence_json:
+            try:
+                parsed = json.loads(cast(str, record.evidence_json))
+                evidence = parsed if isinstance(parsed, list) else []
+            except json.JSONDecodeError:
+                evidence = []
+        return {
+            "session_id": record.session_id,
+            "agent_id": record.agent_id,
+            "task_description": record.task_description,
+            "failure_type": record.failure_type,
+            "cause_node_id": record.cause_node_id,
+            "causal_responsibility_score": record.causal_responsibility_score,
+            "evidence": evidence,
+            "created_at": str(record.created_at) if record.created_at else None,
+        }
+
+    def list_sessions(
+        self,
+        limit: int = 50,
+        offset: int = 0,
+        agent_id: str | None = None,
+        failure_type: str | None = None,
+        since: datetime | None = None,
+        until: datetime | None = None,
+    ) -> tuple[list[dict[str, Any]], int]:
+        """Paginated session list, newest first. Returns (items, total)."""
+        with self._session() as db:
+            query = db.query(SessionRecord)
+            if agent_id:
+                query = query.filter(SessionRecord.agent_id == agent_id)
+            if failure_type:
+                query = query.filter(SessionRecord.failure_type == failure_type)
+            if since is not None:
+                query = query.filter(SessionRecord.created_at >= since)
+            if until is not None:
+                query = query.filter(SessionRecord.created_at <= until)
+
+            total = query.count()
+            items = (
+                query.order_by(SessionRecord.created_at.desc(), SessionRecord.id.desc())
+                .offset(offset)
+                .limit(limit)
+                .all()
+            )
+            return [self._session_summary(r) for r in items], total
+
+    def get_graph(self, session_id: str) -> CausalGraph | None:
+        """Reconstruct the stored CausalGraph for a session, or None."""
+        with self._session() as db:
+            record = db.query(SessionRecord).filter_by(session_id=session_id).first()
+            if record is None:
+                return None
+
+            graph = CausalGraph()
+            steps = (
+                db.query(TraceStepRecord)
+                .filter_by(session_id=session_id)
+                .order_by(TraceStepRecord.step_index)
+                .all()
+            )
+            for step in steps:
+                graph.add_step(CausalGraphNode(
+                    node_id=cast(str, step.node_id),
+                    agent_id=cast(str, step.agent_id),
+                    step_index=cast(int, step.step_index),
+                    otar=StepOTAR(
+                        observation=cast(str, step.observation),
+                        thought=cast(str, step.thought),
+                        action=cast(str, step.action),
+                        result=cast(str, step.result),
+                    ),
+                    parent_id=cast("str | None", step.parent_id),
+                    subtask_id=cast("str | None", step.subtask_id),
+                    execution_time_ms=cast(float, step.execution_time_ms),
+                    error_flag=cast(bool, step.error_flag),
+                ))
+
+            edges = db.query(GraphEdgeRecord).filter_by(session_id=session_id).all()
+            for edge in edges:
+                graph.add_dependency(cast(str, edge.source_id), cast(str, edge.target_id))
+            return graph
+
+    def get_agent_reliability_summary(self, window: int = 10) -> dict[str, dict[str, Any]]:
+        """Per-agent reliability history (last `window` scores) + session counts.
+
+        Scores are recorded at ingest (derived from the trace's error flags)
+        and on recovery feedback, so this reflects real persisted data.
+        """
+        with self._session() as db:
+            agents: dict[str, dict[str, Any]] = {}
+            records = (
+                db.query(ReliabilityRecord)
+                .order_by(ReliabilityRecord.agent_id, ReliabilityRecord.created_at.desc())
+                .all()
+            )
+            for record in records:
+                entry = agents.setdefault(cast(str, record.agent_id), {"scores": [], "n_sessions": 0})
+                if len(entry["scores"]) < window:
+                    entry["scores"].append(record.score)
+
+            counts = (
+                db.query(SessionRecord.agent_id, func.count(SessionRecord.id).label("count"))
+                .group_by(SessionRecord.agent_id)
+                .all()
+            )
+            for agent_id, count in counts:
+                agents.setdefault(agent_id, {"scores": [], "n_sessions": 0})["n_sessions"] = int(count)
+            for entry in agents.values():
+                entry["scores"] = list(reversed(entry["scores"]))
+            return agents
