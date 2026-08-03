@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import time
 from collections import defaultdict
 from collections.abc import AsyncIterator
@@ -19,6 +20,8 @@ from agent_reflex.recovery.playbooks import PlaybookLibrary, StaticRecoverySelec
 from agent_reflex.reliability.scorer import ReliabilityScorer
 from agent_reflex.storage.repository import PostgresRepository
 from agent_reflex.uncertainty.consistency import UncertaintyEscalationController
+
+logger = logging.getLogger("agent_reflex.api")
 
 _attribution_engine: AttributionEngine | None = None
 _playbook_library = PlaybookLibrary()
@@ -147,6 +150,10 @@ async def otlp_receive(request: Request) -> dict[str, Any]:
         except Exception as exc:
             # LLM attribution is best-effort: a provider outage must not
             # reject the trace — persist it, mark the failure_type unknown.
+            logger.warning(
+                "attribution skipped for trace %s", trace_id,
+                extra={"error": f"{type(exc).__name__}: {exc}"},
+            )
             request.app.state.last_attribution_error = f"{type(exc).__name__}: {exc}"
         if _db is not None:
             _db.save_session(

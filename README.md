@@ -64,7 +64,92 @@ uvicorn agent_reflex.dashboard.api:app --reload
 export DEEPSEEK_API_KEY=sk-...
 docker compose up -d
 # Access: API at http://localhost:8000, Grafana at http://localhost:3000
+
+# API keys are mandatory (create one, then pass it to the collector/Grafana)
+docker compose exec app python -m agent_reflex.api.auth create deploy --scope=write
 ```
+
+## Deployment
+
+### API keys and authentication
+
+Every endpoint except `/health` and `/ready` requires an API key
+(`Authorization: Bearer <key>` or `x-api-key` header). Keys are stored as
+SHA-256 hashes in Postgres with `read`/`write` scopes and per-key
+revocation:
+
+```bash
+python -m agent_reflex.api.auth create <name> --scope=write   # prints the key once
+python -m agent_reflex.api.auth create <name> --scope=read
+python -m agent_reflex.api.auth revoke <id>
+python -m agent_reflex.api.auth list
+```
+
+Write endpoints are rate-limited per key (60/min, in-process; back the
+limiter with Redis for multi-worker deployments).
+
+### Environment
+
+Copy `.env.example` to `.env` and fill it in (`.env` is git-ignored).
+Settings load from `AGENT_REFLEX_*` env vars / `.env`. **Production mode is
+fail-fast**: with `AGENT_REFLEX_ENV=production`, the app refuses to start
+unless the LLM key, real DB/Neo4j credentials and the OTel endpoint are
+configured — it never silently falls back to dev defaults.
+
+### The OTLP ingestion path
+
+```
+your agent (OTel SDK) ──OTLP─▶ otel-collector ──otlphttp──▶ POST /v1/traces ──▶ attribution ──▶ Postgres
+```
+
+- `demo/reference_agent.py` is a framework-agnostic SDK producer emitting a
+  failing 3-step trace (no langgraph/crewai dependency).
+- The collector forwards to the API with the `x-api-key` header
+  (`AGENT_REFLEX_API_KEY` env; endpoint overridable via
+  `AGENT_REFLEX_API_ENDPOINT`).
+- The receiver accepts the real OTLP wire format (protobuf and JSON) and
+  reconstructs a causal graph per trace id. LLM attribution is best-effort:
+  on provider failure the trace is still persisted (failure_type NULL) and a
+  JSON warning is logged.
+- The span schema is documented in `docs/otel_ingestion_schema.md`.
+
+### Structured logging
+
+The container runs uvicorn with `deploy/logging-config.json` — every log
+line is JSON (`timestamp`, `level`, `logger`, `message` + structured extra
+fields), so CloudWatch/Stackdriver/Vector can index it directly.
+
+### CI/CD
+
+- `ci.yml`: ruff + mypy, pytest (3.11/3.12) with coverage, Docker build,
+  a **compose-based integration job** (reference agent → real
+  otel-collector → API → Postgres, session row asserted), and security
+  scans (pip-audit fails on high/critical, Trivy fs scan).
+- `cd.yml`: builds and pushes the image to GHCR on `master`, then a deploy
+  stage (SSH `docker compose pull && up -d` with a `/ready` wait) that only
+  runs when `vars.DEPLOY_ENABLED=true` and `DEPLOY_HOST`/`DEPLOY_SSH_KEY`
+  secrets exist.
+
+### Cloud (AWS ECS + RDS)
+
+`deploy/terraform/` provisions a Fargate service + ALB + RDS Postgres.
+Secrets live in SSM Parameter Store (`/agent_reflex/*`), never in git or
+the task definition. See `deploy/terraform/README.md` for the exact
+`aws ssm put-parameter` commands.
+
+## Known Follow-Ups
+
+Deliberately out of scope for the production hardening passes; tracked here
+so they are not silently "fixed":
+
+- Neo4j wiring is stubbed — the API stores everything in Postgres; the
+  compose Neo4j service exists but nothing queries it.
+- `dashboard/` UI endpoints (`/traces/{id}/graph`, `/traces/{id}/attribution`)
+  return stubs.
+- Redaction is a no-op pass-through (`AGENT_REFLEX_REDACTION_ENABLED`).
+- Benchmark datasets are synthetic-only (no real-world traces yet).
+- langgraph/crewai adapters intentionally not added — the ingestion layer is
+  framework-agnostic by design.
 
 ## Model-Agnostic LLM Support
 
