@@ -65,20 +65,20 @@ export function OverviewPage() {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-xl font-semibold">Fleet overview</h1>
-        <p className="text-sm text-slate-400">
+        <h1 className="text-xl font-semibold tracking-tight">Fleet overview</h1>
+        <p className="text-sm text-ink-dim">
           Real data from the backend API — no placeholders. Polled every 30 seconds.
         </p>
       </header>
 
-      <Panel title="Fleet health" actions={<span className="text-xs text-slate-500">{sortedAgents.length} agents</span>}>
+      <Panel title="Fleet health" actions={<span className="text-xs text-ink-faint">{sortedAgents.length} agents</span>}>
         {sortedAgents.length === 0 ? (
           <EmptyState title="No agents yet" hint="Ingest a trace (e.g. demo/reference_agent.py) to populate this table." />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-slate-800 text-xs uppercase tracking-wide text-slate-500">
+                <tr className="border-b border-line text-xs uppercase tracking-wide text-ink-faint">
                   <th className="py-2 pr-4 font-medium">Agent</th>
                   <th className="py-2 pr-4 font-medium">Health</th>
                   <th className="py-2 pr-4 font-medium">Reliability</th>
@@ -88,14 +88,14 @@ export function OverviewPage() {
               </thead>
               <tbody>
                 {sortedAgents.map((agent) => (
-                  <tr key={agent.agent_id} className="border-b border-slate-800/60">
-                    <td className="py-2 pr-4 font-mono text-slate-200">{agent.agent_id}</td>
+                  <tr key={agent.agent_id} className="border-b border-line">
+                    <td className="py-2 pr-4 font-mono text-ink">{agent.agent_id}</td>
                     <td className="py-2 pr-4">
                       <HealthBadge health={agent.health} />
                     </td>
                     <td className="py-2 pr-4">
                       {agent.score === null ? (
-                        <span className="text-slate-500">no data</span>
+                        <span className="text-ink-faint">no data</span>
                       ) : (
                         <span className={scoreColor(agent.score)}>{agent.score.toFixed(3)}</span>
                       )}
@@ -103,10 +103,10 @@ export function OverviewPage() {
                     <td className="py-2 pr-4">
                       <div className="flex items-center gap-2">
                         <Sparkline values={agent.history} />
-                        <span className="text-xs text-slate-500">{trendArrow(agent.trend)}</span>
+                        <span className="text-xs text-ink-faint">{trendArrow(agent.trend)}</span>
                       </div>
                     </td>
-                    <td className="py-2 text-slate-400">{agent.n_sessions}</td>
+                    <td className="py-2 text-ink-faint">{agent.n_sessions}</td>
                   </tr>
                 ))}
               </tbody>
@@ -134,7 +134,7 @@ export function OverviewPage() {
               </div>
               <table className="w-full text-left text-xs">
                 <thead>
-                  <tr className="border-b border-slate-800 text-slate-500">
+                  <tr className="border-b border-line text-ink-faint">
                     <th className="py-1 pr-3 font-medium">Playbook</th>
                     <th className="py-1 pr-3 font-medium">Selector</th>
                     <th className="py-1 pr-3 text-right font-medium">Total</th>
@@ -143,11 +143,11 @@ export function OverviewPage() {
                 </thead>
                 <tbody>
                   {breakdown.map((row, i) => (
-                    <tr key={`${row.playbook}-${row.selector}-${i}`} className="border-b border-slate-800/60">
-                      <td className="py-1 pr-3 font-mono text-slate-300">{row.playbook}</td>
-                      <td className="py-1 pr-3 text-slate-400">{row.selector}</td>
-                      <td className="py-1 pr-3 text-right text-slate-400">{row.total}</td>
-                      <td className="py-1 text-right text-slate-300">{pct(row.success_rate)}</td>
+                    <tr key={`${row.playbook}-${row.selector}-${i}`} className="border-b border-line">
+                      <td className="py-1 pr-3 font-mono text-ink-dim">{row.playbook}</td>
+                      <td className="py-1 pr-3 text-ink-dim">{row.selector}</td>
+                      <td className="py-1 pr-3 text-right text-ink-dim">{row.total}</td>
+                      <td className="py-1 text-right text-ink-dim">{pct(row.success_rate)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -168,20 +168,20 @@ export function OverviewPage() {
         )}
       </Panel>
 
-      <Panel title="Recent failures" actions={<span className="text-xs text-slate-500">{failures.length} with attributed failure</span>}>
+      <Panel title="Recent failures" actions={<span className="text-xs text-ink-faint">{failures.length} with attributed failure</span>}>
         {failures.length === 0 ? (
           <EmptyState title="No failures recorded" hint="When a session is attributed with a failure type it shows up here, linking into its causal graph." />
         ) : (
-          <ul className="divide-y divide-slate-800/60">
+          <ul className="divide-y divide-line">
             {failures.slice(0, 10).map((s) => (
               <li key={s.session_id}>
-                <Link to={`/sessions/${encodeURIComponent(s.session_id)}`} className="flex flex-wrap items-center gap-3 py-2 hover:bg-slate-900/60">
-                  <span className="rounded bg-red-950/60 px-1.5 py-0.5 font-mono text-[11px] text-red-300">{s.failure_type}</span>
-                  <span className="min-w-0 flex-1 truncate text-sm text-slate-200">
+                <Link to={`/sessions/${encodeURIComponent(s.session_id)}`} className="flex flex-wrap items-center gap-3 py-2 hover:bg-surface/60">
+                  <span className="rounded bg-signal-dim px-1.5 py-0.5 font-mono text-[11px] text-signal">{s.failure_type}</span>
+                  <span className="min-w-0 flex-1 truncate text-sm text-ink">
                     {s.task_description || "(no task description)"}
                   </span>
-                  <span className="font-mono text-xs text-slate-500">{shortId(s.session_id)}</span>
-                  <span className="text-xs text-slate-500">{formatDate(s.created_at)}</span>
+                  <span className="font-mono text-xs text-ink-faint">{shortId(s.session_id)}</span>
+                  <span className="text-xs text-ink-faint">{formatDate(s.created_at)}</span>
                 </Link>
               </li>
             ))}
@@ -197,9 +197,9 @@ function healthRank(h: string): number {
 }
 
 function scoreColor(score: number): string {
-  if (score >= 0.7) return "text-emerald-400";
-  if (score >= 0.4) return "text-amber-400";
-  return "text-red-400";
+  if (score >= 0.7) return "text-evidence";
+  if (score >= 0.4) return "text-degraded";
+  return "text-signal";
 }
 
 function trendArrow(trend: string): string {
@@ -223,10 +223,10 @@ function formatDate(raw: string | null): string {
 
 function StatCard({ label, value, sub }: { label: string; value: string; sub: string }) {
   return (
-    <div className="rounded border border-slate-800 bg-slate-950/50 p-3">
-      <p className="text-xs text-slate-500">{label}</p>
-      <p className="mt-1 text-xl font-semibold text-slate-100">{value}</p>
-      <p className="text-xs text-slate-500">{sub}</p>
+    <div className="rounded border border-line bg-surface p-3">
+      <p className="text-xs text-ink-faint">{label}</p>
+      <p className="mt-1 text-xl font-semibold tracking-tight text-ink">{value}</p>
+      <p className="text-xs text-ink-faint">{sub}</p>
     </div>
   );
 }
@@ -246,9 +246,9 @@ function Heatmap({ cells }: { cells: HeatmapCell[] }) {
       <table className="text-xs">
         <thead>
           <tr>
-            <th className="pr-2 text-left font-medium text-slate-500">failure type</th>
+            <th className="pr-2 text-left font-medium text-ink-faint">failure type</th>
             {dates.map((d) => (
-              <th key={d} className="px-1 pb-1 text-right font-medium text-slate-600" title={d}>
+              <th key={d} className="px-1 pb-1 text-right font-medium text-ink-faint" title={d}>
                 {d.slice(8, 10)}
               </th>
             ))}
@@ -257,7 +257,7 @@ function Heatmap({ cells }: { cells: HeatmapCell[] }) {
         <tbody>
           {types.map((t) => (
             <tr key={t}>
-              <td className="max-w-40 truncate pr-2 font-mono text-[11px] text-slate-400" title={t}>
+              <td className="max-w-40 truncate pr-2 font-mono text-[11px] text-ink-dim" title={t}>
                 {t}
               </td>
               {dates.map((d) => {
@@ -266,7 +266,7 @@ function Heatmap({ cells }: { cells: HeatmapCell[] }) {
                   <td key={d} className="px-1 py-0.5 text-center">
                     <span
                       title={`${t} on ${d}: ${count}`}
-                      className={`inline-block h-4 w-4 rounded-sm ${count === 0 ? "bg-slate-900" : "bg-red-600"} `}
+                      className={`inline-block h-4 w-4 rounded-sm ${count === 0 ? "bg-line" : "bg-signal"} `}
                       style={count === 0 ? undefined : { opacity: 0.3 + 0.7 * (count / maxCount) }}
                     />
                   </td>
@@ -287,11 +287,11 @@ function EvalComparison({ data }: { data: EvalResultsResponse }) {
   if (!oracle || !naive) return <EmptyState title="Incomplete eval data" />;
   return (
     <div>
-      <p className="mb-3 text-xs text-slate-400">
+      <p className="mb-3 text-xs text-ink-dim">
         Side-by-side step attribution on {data.total_scenarios ?? "?"} synthetic scenarios (file:{" "}
-        <code className="rounded bg-slate-800 px-1">{data.file}</code>). The oracle method wins only on the
-        transient-recovery decoys; the naive baseline's overall score is partly a design artifact of the base set —
-        both numbers are shown, not one.
+        <code className="rounded border border-line bg-surface px-1 font-mono text-[11px]">{data.file}</code>). The oracle
+        method wins only on the transient-recovery decoys; the naive baseline's overall score is partly a design artifact
+        of the base set — both numbers are shown, not one.
       </p>
       <div className="grid max-w-md grid-cols-2 gap-3">
         <StatCard label="Oracle-guided backtracking" value={`${oracle.step_accuracy_pct}% step`} sub={`${oracle.mode_accuracy_pct}% mode`} />

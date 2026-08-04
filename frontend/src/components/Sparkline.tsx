@@ -1,7 +1,7 @@
 /** Tiny inline SVG sparkline for per-agent reliability history. */
 export function Sparkline({ values, width = 96, height = 24 }: { values: number[]; width?: number; height?: number }) {
   if (values.length < 2) {
-    return <span className="text-xs text-slate-500">no history</span>;
+    return <span className="text-xs text-ink-faint">no history</span>;
   }
   const min = Math.min(...values);
   const max = Math.max(...values);
@@ -15,7 +15,7 @@ export function Sparkline({ values, width = 96, height = 24 }: { values: number[
     .join(" ");
 
   return (
-    <svg width={width} height={height} aria-hidden="true" className="text-emerald-400">
+    <svg width={width} height={height} aria-hidden="true" className="text-evidence">
       <polyline points={points} fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
     </svg>
   );

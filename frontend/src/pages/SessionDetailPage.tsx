@@ -26,13 +26,16 @@ export const PLAYBOOKS = [
   "tool_fallback",
 ];
 
-/** Node colouring follows the project's established convention:
- * root cause = red, error-flagged = orange, normal = green. */
+/** Node colouring follows the console's signalling language:
+ * root cause = signal, error-flagged = degraded, normal = evidence. */
 const NODE_FILL: Record<string, string> = {
-  root: "#ef4444",
-  error: "#f59e0b",
-  normal: "#10b981",
+  root: "#ff6b4a",
+  error: "#f2b84b",
+  normal: "#5eead4",
 };
+
+const fieldClass =
+  "w-full rounded border border-line bg-bg px-2 py-1.5 text-ink focus:border-evidence focus:outline-none focus:ring-1 focus:ring-evidence/50";
 
 export function SessionDetailPage() {
   const { sessionId = "" } = useParams();
@@ -91,7 +94,7 @@ export function SessionDetailPage() {
         id: `e-${i}`,
         source: e.source,
         target: e.target,
-        style: { stroke: e.type === "data_dependency" ? "#38bdf8" : "#64748b", strokeDasharray: e.type === "data_dependency" ? "5 5" : undefined },
+        style: { stroke: e.type === "data_dependency" ? "#5eead4" : "#232a3d", strokeDasharray: e.type === "data_dependency" ? "5 5" : undefined },
       })) satisfies Edge[],
     [graph],
   );
@@ -155,15 +158,15 @@ export function SessionDetailPage() {
   return (
     <div className="space-y-4">
       <header>
-        <h1 className="break-all font-mono text-lg font-semibold">{sessionId}</h1>
-        <p className="text-sm text-slate-400">
+        <h1 className="break-all font-mono text-lg font-semibold tracking-tight">{sessionId}</h1>
+        <p className="text-sm text-ink-dim">
           {graph.nodes.length} step(s), {graph.edges.length} edge(s). Click a node for its full OTAR detail.
         </p>
       </header>
 
       <div className="grid gap-4 xl:grid-cols-[1fr_340px]">
         <Panel title="Causal graph" actions={<GraphLegend />}>
-          <div className="h-[480px] rounded border border-slate-800 bg-slate-950/60">
+          <div className="h-[480px] rounded-md border border-line bg-surface">
             <ReactFlow
               nodes={nodes}
               edges={edges}
@@ -173,7 +176,7 @@ export function SessionDetailPage() {
               nodesConnectable={false}
               elementsSelectable
             >
-              <Background color="#1e293b" gap={20} />
+              <Background color="#232a3d" gap={20} />
               <Controls />
             </ReactFlow>
           </div>
@@ -187,27 +190,27 @@ export function SessionDetailPage() {
                 hint="The LLM attribution failed or was skipped at ingest time. The graph is still persisted (best-effort ingestion) — the trace exists, but no failure type or root cause was determined."
               />
             ) : (
-              <dl className="space-y-2 text-sm">
+              <dl className="space-y-3 text-sm">
                 <div>
-                  <dt className="text-xs uppercase tracking-wide text-slate-500">Failure type</dt>
-                  <dd className="mt-0.5 font-mono text-red-300">{attribution.failure_type}</dd>
+                  <dt className="text-[11px] uppercase tracking-[0.12em] text-ink-faint">Failure type</dt>
+                  <dd className="mt-0.5 font-mono text-signal">{attribution.failure_type}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs uppercase tracking-wide text-slate-500">Root cause</dt>
-                  <dd className="mt-0.5 font-mono text-slate-200">{attribution.cause_node_id ?? "—"}</dd>
+                  <dt className="text-[11px] uppercase tracking-[0.12em] text-ink-faint">Root cause</dt>
+                  <dd className="mt-0.5 font-mono text-ink">{attribution.cause_node_id ?? "—"}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs uppercase tracking-wide text-slate-500">Causal responsibility (CRS)</dt>
-                  <dd className="mt-0.5 text-slate-200">{attribution.crs.toFixed(2)}</dd>
+                  <dt className="text-[11px] uppercase tracking-[0.12em] text-ink-faint">Causal responsibility (CRS)</dt>
+                  <dd className="mt-0.5 font-mono text-evidence">{attribution.crs.toFixed(2)}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs uppercase tracking-wide text-slate-500">Evidence</dt>
-                  <dd className="mt-0.5 space-y-1">
+                  <dt className="text-[11px] uppercase tracking-[0.12em] text-ink-faint">Evidence</dt>
+                  <dd className="mt-0.5 space-y-1.5">
                     {attribution.evidence.length === 0 ? (
-                      <span className="text-slate-500">no evidence recorded</span>
+                      <span className="text-ink-faint">no evidence recorded</span>
                     ) : (
                       attribution.evidence.map((e, i) => (
-                        <p key={i} className="rounded bg-slate-950/60 p-2 text-xs text-slate-300">
+                        <p key={i} className="rounded-md border border-line/60 bg-bg/60 p-2 font-mono text-xs text-ink-dim">
                           {e}
                         </p>
                       ))
@@ -222,21 +225,21 @@ export function SessionDetailPage() {
             {selectedNode ? (
               <NodeDetail node={selectedNode} />
             ) : (
-              <p className="text-sm text-slate-500">Click a node in the graph to see its observation / thought / action / result.</p>
+              <p className="text-sm text-ink-dim">Click a node in the graph to see its observation / thought / action / result.</p>
             )}
           </Panel>
 
           <Panel title="Recovery feedback">
-            <p className="mb-3 text-xs text-slate-400">
+            <p className="mb-3 text-xs text-ink-dim">
               Tell the bandit how this session's recovery went. Requires a write-scoped key.
             </p>
             <form onSubmit={submitFeedback} className="space-y-3 text-sm">
               <label className="block">
-                <span className="mb-1 block text-xs text-slate-500">Playbook</span>
+                <span className="mb-1 block text-xs text-ink-faint">Playbook</span>
                 <select
                   value={feedback.playbook}
                   onChange={(e) => setFeedback({ ...feedback, playbook: e.target.value })}
-                  className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1.5 text-slate-100 focus:border-emerald-500 focus:outline-none"
+                  className={`${fieldClass} w-full font-mono text-xs`}
                 >
                   {PLAYBOOKS.map((p) => (
                     <option key={p} value={p}>
@@ -250,40 +253,40 @@ export function SessionDetailPage() {
                   type="checkbox"
                   checked={feedback.success}
                   onChange={(e) => setFeedback({ ...feedback, success: e.target.checked })}
-                  className="size-4"
+                  className="size-4 accent-evidence"
                 />
-                <span className="text-slate-300">Recovery succeeded</span>
+                <span className="text-ink-dim">Recovery succeeded</span>
               </label>
               <label className="flex items-center gap-2">
                 <input
                   type="checkbox"
                   checked={feedback.partial}
                   onChange={(e) => setFeedback({ ...feedback, partial: e.target.checked })}
-                  className="size-4"
+                  className="size-4 accent-evidence"
                 />
-                <span className="text-slate-300">Partially recovered</span>
+                <span className="text-ink-dim">Partially recovered</span>
               </label>
 
               {writeKeyPrompt && (
                 <label className="block">
-                  <span className="mb-1 block text-xs text-slate-500">Write-scoped API key</span>
+                  <span className="mb-1 block text-xs text-ink-faint">Write-scoped API key</span>
                   <input
                     type="password"
                     value={writeInput}
                     onChange={(e) => setWriteInput(e.target.value)}
                     placeholder="python -m agent_reflex.api.auth create feedback --scope=write"
-                    className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1.5 text-slate-100 focus:border-emerald-500 focus:outline-none"
+                    className={`${fieldClass} w-full font-mono text-xs`}
                   />
                 </label>
               )}
 
               {feedbackError && (
-                <p role="alert" className="text-xs text-red-300">
+                <p role="alert" className="text-xs text-signal">
                   {feedbackError}
                 </p>
               )}
               {feedbackDone && (
-                <p role="status" className="text-xs text-emerald-400">
+                <p role="status" className="text-xs text-evidence">
                   Feedback recorded. It appears in the overview's recovery stats on next load.
                 </p>
               )}
@@ -291,7 +294,7 @@ export function SessionDetailPage() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="rounded bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
+                className="rounded-md border border-evidence/40 bg-evidence-dim px-3 py-1.5 text-sm font-medium text-evidence hover:bg-evidence hover:text-bg disabled:opacity-50"
               >
                 {submitting ? "Submitting…" : writeKey ? "Submit feedback" : writeKeyPrompt ? "Save key & submit" : "Submit feedback"}
               </button>
@@ -312,15 +315,15 @@ function NodeDetail({ node }: { node: GraphNode }) {
   ];
   return (
     <div className="space-y-2 text-sm">
-      <p className="font-mono text-xs text-slate-400">
+      <p className="font-mono text-xs text-ink-dim">
         {node.label}
-        {node.error && <span className="ml-2 text-orange-400">● error-flagged</span>}
-        {node.is_root_cause && <span className="ml-2 text-red-400">● root cause</span>}
+        {node.error && <span className="ml-2 text-degraded">● error-flagged</span>}
+        {node.is_root_cause && <span className="ml-2 text-signal">● root cause</span>}
       </p>
       {rows.map(([label, value]) => (
         <div key={label}>
-          <dt className="text-[11px] uppercase tracking-wide text-slate-500">{label}</dt>
-          <dd className="mt-0.5 whitespace-pre-wrap rounded bg-slate-950/60 p-2 text-xs text-slate-300">
+          <dt className="text-[11px] uppercase tracking-[0.12em] text-ink-faint">{label}</dt>
+          <dd className="mt-0.5 whitespace-pre-wrap rounded-md border border-line/60 bg-bg/60 p-2 font-mono text-xs text-ink-dim">
             {value || "—"}
           </dd>
         </div>
@@ -331,7 +334,7 @@ function NodeDetail({ node }: { node: GraphNode }) {
 
 function GraphLegend() {
   return (
-    <div className="flex gap-3 text-[11px] text-slate-400">
+    <div className="flex gap-3 text-[11px] text-ink-faint">
       <span className="flex items-center gap-1">
         <span className="inline-block size-2.5 rounded-full" style={{ background: NODE_FILL.root }} /> root cause
       </span>
@@ -364,11 +367,12 @@ function layoutGraph(graph: GraphResponse): Node[] {
       id: n.id,
       position: pos,
       data: { label: n.label },
+      className: n.is_root_cause ? "is-root" : undefined,
       style: {
         background: fill,
-        color: "#0f172a",
-        border: n.is_root_cause ? "3px solid #fecaca" : "1px solid #1e293b",
-        borderRadius: 8,
+        color: "#0b0e14",
+        border: n.is_root_cause ? "2px solid #ff6b4a" : "1px solid #232a3d",
+        borderRadius: 6,
         fontWeight: 600,
         fontSize: 12,
         padding: "6px 10px",

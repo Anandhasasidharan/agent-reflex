@@ -1,12 +1,94 @@
+@import "@fontsource/inter/400.css";
+@import "@fontsource/inter/500.css";
+@import "@fontsource/inter/600.css";
+@import "@fontsource/inter/700.css";
+@import "@fontsource/fragment-mono/400.css";
 @import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+ * Token system. Exactly five hue families — near-black cool neutrals, one
+ * warm accent (signal) for flagged/attention, one cold accent (evidence)
+ * for confirmed/traced/success, plus a single third status color (degraded)
+ * for the middle health state only. Dimmed variants are the same hues at
+ * reduced opacity/luminance, never new colors.
+ * ------------------------------------------------------------------------- */
+@theme {
+  --color-bg: #0b0e14;
+  --color-surface: #12161f;
+  --color-line: #232a3d;
+
+  --color-ink: #e7e9f2;
+  --color-ink-dim: #a3abc0;
+  --color-ink-faint: #7a85a0;
+
+  --color-signal: #ff6b4a;
+  --color-signal-dim: rgba(255, 107, 74, 0.14);
+  --color-evidence: #5eead4;
+  --color-evidence-dim: rgba(94, 234, 212, 0.12);
+  --color-degraded: #f2b84b;
+  --color-degraded-dim: rgba(242, 184, 75, 0.14);
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Fragment Mono", ui-monospace, "SF Mono", monospace;
+}
 
 :root {
   color-scheme: dark;
 }
 
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
 body {
-  @apply bg-slate-950 text-slate-100 antialiased;
   margin: 0;
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--color-evidence-dim);
+}
+
+/* Intentional, on-brand focus ring (cold accent = "you are here, traced"). */
+:focus-visible {
+  outline: 2px solid var(--color-evidence);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* ---------------------------------------------------------------------------
+ * @xyflow/react canvas — themed through its CSS variables so the graph
+ * speaks the same color language as the rest of the console.
+ * ------------------------------------------------------------------------- */
+.react-flow {
+  --xy-background-color: var(--color-surface);
+  --xy-edge-stroke: var(--color-line);
+  --xy-edge-stroke-hovered: var(--color-ink-dim);
+  --xy-edge-stroke-selected: var(--color-evidence);
+  --xy-controls-button-background-color: var(--color-surface);
+  --xy-controls-button-background-color-hover: var(--color-bg);
+  --xy-controls-button-color: var(--color-ink-dim);
+  --xy-controls-button-color-hover: var(--color-ink);
+  --xy-controls-button-border-color: var(--color-line);
+  --xy-minimap-background-color: var(--color-surface);
+  --xy-minimap-mask-background-color: rgba(11, 14, 20, 0.85);
+  --xy-attribution-color: var(--color-ink-faint);
+  --xy-selection-color: var(--color-evidence-dim);
+  --xy-node-boxshadow-selected: 0 0 0 2px var(--color-evidence);
+}
+
+/* The one moment of drama: the root-cause node. Everything else stays
+ * quiet so this single glow is the signature of the console. */
+.react-flow__node.is-root {
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--color-signal) 50%, transparent),
+    0 0 18px 4px color-mix(in oklab, var(--color-signal) 30%, transparent),
+    0 0 46px 12px color-mix(in oklab, var(--color-signal) 16%, transparent);
 }
 
 @media (prefers-reduced-motion: reduce) {

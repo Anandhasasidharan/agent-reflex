@@ -5,8 +5,8 @@ import type { ReactNode } from "react";
 
 export function Loading({ label = "Loading…" }: { label?: string }) {
   return (
-    <div role="status" className="flex items-center gap-2 py-8 text-sm text-slate-400">
-      <span className="inline-block size-3 animate-spin rounded-full border-2 border-slate-500 border-t-transparent" />
+    <div role="status" className="flex items-center gap-2 py-8 text-sm text-ink-dim">
+      <span className="inline-block size-3 animate-spin rounded-full border-2 border-line border-t-evidence" />
       {label}
     </div>
   );
@@ -14,14 +14,14 @@ export function Loading({ label = "Loading…" }: { label?: string }) {
 
 export function ErrorState({ message, retry }: { message: string; retry?: () => void }) {
   return (
-    <div role="alert" className="rounded-md border border-red-800/60 bg-red-950/40 p-4 text-sm text-red-200">
-      <p className="font-medium">Something went wrong</p>
-      <p className="mt-1">{message}</p>
+    <div role="alert" className="rounded-lg border border-signal/30 bg-signal-dim p-4 text-sm">
+      <p className="font-medium text-signal">Something went wrong</p>
+      <p className="mt-1 text-ink-dim">{message}</p>
       {retry && (
         <button
           type="button"
           onClick={retry}
-          className="mt-3 rounded border border-red-700 px-3 py-1 text-xs text-red-100 hover:bg-red-900/60"
+          className="mt-3 rounded border border-signal/40 bg-signal-dim px-3 py-1 text-xs text-signal hover:bg-signal hover:text-bg"
         >
           Retry
         </button>
@@ -32,18 +32,21 @@ export function ErrorState({ message, retry }: { message: string; retry?: () => 
 
 export function EmptyState({ title, hint }: { title: string; hint?: string }) {
   return (
-    <div className="rounded-md border border-slate-800 bg-slate-900/50 p-6 text-center text-sm text-slate-400">
-      <p className="font-medium text-slate-300">{title}</p>
-      {hint && <p className="mt-1">{hint}</p>}
+    <div className="rounded-lg border border-line bg-surface/50 p-6 text-center text-sm text-ink-dim">
+      <p className="font-medium text-ink">{title}</p>
+      {hint && <p className="mt-1 text-ink-faint">{hint}</p>}
     </div>
   );
 }
 
 export function Panel({ title, children, actions }: { title: string; children: ReactNode; actions?: ReactNode }) {
   return (
-    <section className="rounded-lg border border-slate-800 bg-slate-900/60 p-4">
+    <section className="rounded-lg border border-line bg-surface/70 p-4">
       <header className="mb-3 flex items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-300">{title}</h2>
+        <h2 className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-dim">
+          <span aria-hidden className="inline-block h-3 w-px bg-evidence/70" />
+          {title}
+        </h2>
         {actions}
       </header>
       {children}
@@ -53,13 +56,18 @@ export function Panel({ title, children, actions }: { title: string; children: R
 
 export function HealthBadge({ health }: { health: string }) {
   const styles: Record<string, string> = {
-    healthy: "bg-emerald-900/60 text-emerald-300 border-emerald-700",
-    degraded: "bg-amber-900/60 text-amber-300 border-amber-700",
-    critical: "bg-red-900/60 text-red-300 border-red-700",
-    unknown: "bg-slate-800 text-slate-400 border-slate-700",
+    healthy: "border-evidence/40 bg-evidence-dim text-evidence",
+    degraded: "border-degraded/40 bg-degraded-dim text-degraded",
+    critical: "border-signal/40 bg-signal-dim text-signal",
+    unknown: "border-line bg-surface text-ink-faint",
   };
   return (
-    <span className={`inline-block rounded-full border px-2 py-0.5 text-xs ${styles[health] ?? styles.unknown}`}>
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs ${
+        styles[health] ?? styles.unknown
+      }`}
+    >
+      <span aria-hidden className="size-1.5 rounded-full bg-current opacity-80" />
       {health}
     </span>
   );
